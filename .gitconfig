@@ -1,0 +1,10 @@
+[user]
+	email = danielucho345@gmail.com
+	name = danielucho345
+	password = dUm+s-9dreChes2ph4+L
+[credential]
+	helper = cache --timeout 172800
+[push]
+	autoSetupRemote = true
+[init]
+	defaultBranch = master
