@@ -1,0 +1,86 @@
+# Alacritty Configuration File
+#
+# This file allows you to customize Alacritty terminal emulator settings.
+# Documentation: https://github.com/alacritty/alacritty
+
+[window]
+# Window dimensions in character columns and rows.
+[window.dimensions]
+columns = 80
+lines = 24
+
+# Whether the window should start maximized or not.
+maximized = false
+
+# Startup mode (can be "fullscreen", "maximized", or "windowed").
+startup_mode = "windowed"
+
+# Opacity of the window (0.0 is fully transparent, 1.0 is opaque).
+opacity = 1.0
+
+[font]
+# Font family to use.
+family = "Arial"
+
+# Font size.
+size = 20
+
+# Bold font weight (e.g., "Normal", "Medium", "Bold").
+[font.bold]
+weight = "Bold"
+
+[colors]
+[colors.primary]
+background = "#1E1E2E"
+foreground = "#C5C8C6"
+
+[colors.normal]
+black = "#1D2021"
+red = "#FB4934"
+green = "#B8BB26"
+yellow = "#FABD2F"
+blue = "#83A598"
+magenta = "#D3869B"
+cyan = "#8EC07C"
+white = "#EBDBB2"
+
+[colors.bright]
+black = "#928374"
+red = "#FB4934"
+green = "#B8BB26"
+yellow = "#FABD2F"
+blue = "#83A598"
+magenta = "#D3869B"
+cyan = "#8EC07C"
+white = "#FDF4C1"
+
+[cursor]
+style = "Block"
+blink = true
+
+[[key_bindings]]
+key = "V"
+mods = "Control"
+action = "Paste"
+
+[[key_bindings]]
+key = "C"
+mods = "Control"
+action = "Copy"
+
+[[key_bindings]]
+key = "Q"
+mods = "Control"
+action = "Quit"
+
+[scrolling]
+history = 10000
+multiplier = 3
+
+[mouse]
+hide_when_typing = true
+
+[padding]
+x = 10
+y = 10
+
