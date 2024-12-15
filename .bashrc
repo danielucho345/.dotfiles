@@ -121,3 +121,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # Ensure Alacritty uses the custom configuration
 export GH_CONFIG_DIR=~/.config/gh
 export XDG_CONFIG_HOME="$HOME/.dotfiles"
+export PATH="$HOME/.local/bin:$PATH"
+# Source Oh My Posh from dotfiles
+if [ -f "$HOME/.dotfiles/oh-my-posh.sh" ]; then
+  source "$HOME/.dotfiles/oh-my-posh.sh"
+fi

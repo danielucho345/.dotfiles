@@ -1,3 +1,6 @@
 [submodule "nvim"]
 	path = nvim
 	url = https://github.com/danielucho345/lazy-dani
+[submodule "oh_my_posh"]
+	path = oh_my_posh
+	url = https://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@github.com/danielucho345/oh_my_posh
