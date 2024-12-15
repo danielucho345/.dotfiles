@@ -120,3 +120,4 @@ fi
 export PATH="$HOME/.cargo/bin:$PATH"
 source /home/daniel/alacritty/extra/completions/alacritty.bash
 export XDG_CONFIG_HOME=/home/daniel/.dotfiles
+export GH_CONFIG_DIR=~/.config/gh
