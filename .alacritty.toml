@@ -1,145 +1,20 @@
-# Alacritty Configuration File
-#
-# This file allows you to customize Alacritty terminal emulator settings.
-# Documentation: https://github.com/alacritty/alacritty
-
-[window]
-# Window dimensions in character columns and rows.
-[window.dimensions]
-columns = 80
-lines = 24
-
-# Whether the window should start maximized or not.
-maximized = false
-
-# Startup mode (can be "fullscreen", "maximized", or "windowed").
-startup_mode = "windowed"
-
-# Opacity of the window (0.0 is fully transparent, 1.0 is opaque).
-opacity = 1.0
-
-[font]
-# Font family to use.
-family = "Arial"
-
-# Font size.
-size = 20
-
-# Bold font weight (e.g., "Normal", "Medium", "Bold").
-[font.bold]
-weight = "Bold"
-
-[colors]
-[colors.primary]
-background = "#1E1E2E"
-foreground = "#C5C8C6"
-
-[colors.normal]
-black = "#1D2021"
-red = "#FB4934"
-green = "#B8BB26"
-yellow = "#FABD2F"
-blue = "#83A598"
-magenta = "#D3869B"
-cyan = "#8EC07C"
-white = "#EBDBB2"
-
-[colors.bright]
-black = "#928374"
-red = "#FB4934"
-green = "#B8BB26"
-yellow = "#FABD2F"
-blue = "#83A598"
-magenta = "#D3869B"
-cyan = "#8EC07C"
-white = "#FDF4C1"
-
-[cursor]
-style = "Block"
-blink = true
-
-[[key_bindings]]
-key = "V"
-mods = "Control"
-action = "Paste"
-
-[[key_bindings]]
-key = "C"
-mods = "Control"
-action = "Copy"
-
-[[key_bindings]]
-key = "Q"
-mods = "Control"
-action = "Quit"
-
-[scrolling]
-history = 10000
-multiplier = 3
-
-[mouse]
-hide_when_typing = true
-
-[padding]
-x = 10
-y = 10
-
-# Alacritty configuration file
-# Configuration for the terminal emulator "Alacritty".
-# Documentation: https://github.com/alacritty/alacritty
-
+# Window settings
 [window]
 opacity = 0.9
 padding.x = 10
 padding.y = 10
 decorations = "Full"
 decorations_theme_variant = "Light" # "Dark"
-title = "Alacritty"
-startup_mode = "Maximized" # Options: Fullscreen, Maximized, Windowed
 
+# Font settings
 [font]
+# Use Agave Nerd Font as the default family
 normal.family = "Agave Nerd Font"
 bold.family = "Agave Nerd Font"
 italic.family = "Agave Nerd Font"
 bold_italic.family = "Agave Nerd Font"
-size = 25
-offset.x = 0
-offset.y = 0
-use_thin_strokes = false
 
-[colors]
-primary.background = "0x1E1E2E"
-primary.foreground = "0xCDD6F4"
-cursor.text = "0x1E1E2E"
-cursor.cursor = "0xCDD6F4"
-selection.text = "0xCDD6F4"
-selection.background = "0x3E4451"
-normal.black = "0x1E1E2E"
-normal.red = "0xF38BA8"
-normal.green = "0xA6E3A1"
-normal.yellow = "0xF9E2AF"
-normal.blue = "0x89B4FA"
-normal.magenta = "0xCBA6F7"
-normal.cyan = "0x94E2D5"
-normal.white = "0xBAC2DE"
-bright.black = "0x585B70"
-bright.red = "0xF38BA8"
-bright.green = "0xA6E3A1"
-bright.yellow = "0xF9E2AF"
-bright.blue = "0x89B4FA"
-bright.magenta = "0xCBA6F7"
-bright.cyan = "0x94E2D5"
-bright.white = "0xCDD6F4"
 
-[cursor]
-style = "Block" # Options: Block, Underline, Beam
-blink = false
+# Font size
+size = 16
 
-[scrolling]
-history = 10000 # Number of lines to keep in scrollback buffer
-multiplier = 3  # Scroll speed multiplier
-
-[performance]
-dpi = 165 # DPI scaling
-fast_scroll = true
-fast_scroll_multiplier = 3.0
