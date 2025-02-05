@@ -17,7 +17,6 @@ if [ -d "$HOME/.dotfiles" ]; then
   elif [ -n "$BASH_VERSION" ]; then
     eval "$(oh-my-posh init bash --config /home/daniel/.dotfiles/oh_my_posh/.config/oh_my_posh/custom.json)"
   fi
-  source "$HOME/.dotfiles/oh-my-posh.sh"
 fi
 
 alias nvimconfig="nvim ~/.config/nvim/init.lua"
@@ -27,3 +26,5 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="/opt/nvim/bin:$PATH"
 
 export XDG_CONFIG_HOME="$HOME/.config"
+
+export TMUX_CONF="$HOME/.config/tmux/tmux.conf"
