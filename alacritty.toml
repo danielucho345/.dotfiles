@@ -1,0 +1,45 @@
+
+# Window settings
+[window]
+opacity = 0.9
+padding.x = 10
+padding.y = 10
+decorations = "Full"
+decorations_theme_variant = "Light" # "Dark"
+
+# Font settings
+[font]
+normal.family = "Agave Nerd Font"
+bold.family = "Agave Nerd Font"
+italic.family = "Agave Nerd Font"
+bold_italic.family = "Agave Nerd Font"
+size = 14
+
+# Colors for One Dark Pro theme
+[colors]
+# Primary colors
+primary.background = "#282C34"
+primary.foreground = "#ABB2BF"
+
+# Cursor colors
+cursor = { text = "#282C34", cursor = "#528BFF" }
+
+# Normal colors
+normal.black = "#21252B"
+normal.red = "#E06C75"
+normal.green = "#98C379"
+normal.yellow = "#E5C07B"
+normal.blue = "#61AFEF"
+normal.magenta = "#C678DD"
+normal.cyan = "#56B6C2"
+normal.white = "#F8F8F2"
+
+# Bright colors
+bright.black = "#5C6370"
+bright.red = "#E06C75"
+bright.green = "#98C379"
+bright.yellow = "#E5C07B"
+bright.blue = "#61AFEF"
+bright.magenta = "#C678DD"
+bright.cyan = "#56B6C2"
+bright.white = "#FFFFFF"

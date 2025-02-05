@@ -1,0 +1,6 @@
+[submodule "nvim/.config/nvim"]
+	path = nvim/.config/nvim
+	url = https://github.com/danielucho345/lazy-dani
+[submodule "oh_my_posh/.config/oh_my_posh"]
+	path = oh_my_posh/.config/oh_my_posh
+	url = https://github.com/danielucho345/oh_my_posh
