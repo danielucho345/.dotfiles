@@ -1,5 +1,3 @@
-echo "Hello, Zsh!"
-
 eval "$(oh-my-posh init zsh --config ~/.dotfiles/oh_my_posh/.config/oh_my_posh/custom.json)" 
 
 eval "$(/opt/homebrew/bin/brew shellenv)"
