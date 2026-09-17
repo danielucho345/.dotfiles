@@ -1,20 +1,63 @@
-# Insttallation for omarchy config
+# Omarchy dotfiles
 
-## Requirements
-* git
-* https://github.com/bobvanderlinden/aw-watcher-window-hyprland
+Safe, opt-in personal configuration for Omarchy 4.0.4. Existing user configuration is treated as authoritative: the scripts do not edit `/usr/share/omarchy/` and do not delete existing `~/.config` content.
 
-## Steps
-1. for making the installations scripst `chmod +x *.sh`
-2. to make the install `./install-all.sh` or uninstall all `./unintall-all.sh`
+## Before you begin
 
-## Add to bashrc
-* for oh-my-posh: `eval "$(oh-my-posh init bash --config /home/daniel/.dotfiles/config/oh-my-posh/custom.json)"
-* for bacon: `export PATH="$HOME/.cargo/bin:$PATH"
-* For python code 
-`
+Review the scripts and run a dry run first:
+
+```bash
+./install-all.sh --list
+./install-all.sh --dry-run all
+```
+
+The scripts install Arch/AUR packages, optionally link configuration with GNU Stow, optionally source Hyprland overrides, and install user desktop launchers. Package installation requires `sudo`; AUR installation requires `yay`.
+
+## Operations
+
+```bash
+./install-all.sh packages             # explicit package manifest
+./install-all.sh dotfiles             # refuses existing config conflicts
+./install-all.sh hyprland             # opt-in; backs up hyprland.conf
+./install-all.sh desktop-launchers    # backs up existing launchers
+./install-all.sh postgresql           # separate stateful setup
+./install-all.sh all                  # packages, dotfiles, launchers only
+```
+
+Every operation can be previewed with `--dry-run`. Scripts resolve paths from their own location, so they can be run from another directory.
+
+## Safety and rollback
+
+- Existing dotfile conflicts stop installation; nothing is removed automatically.
+- Existing desktop launchers and Hyprland configuration are copied to timestamped `.bak` files before replacement.
+- The uninstall command is report-only because package ownership cannot safely be inferred from shell scripts:
+
+```bash
+./uninstall-all.sh
+```
+
+- Never delete PostgreSQL data to undo setup.
+- Omarchy-owned files under `/usr/share/omarchy/` are never modified.
+
+## Hyprland notes
+
+Hyprland overrides are opt-in. The current overrides assume monitors named `DP-1` and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`, `wl-copy`, and ActivityWatch. Review `hyprland-overrides.conf` before enabling it on different hardware. The installer checks the existing config, avoids duplicate source lines, creates a backup, and validates with `hyprctl configerrors` when possible.
+
+## Shell environment examples
+
+```bash
+eval "$(oh-my-posh init bash --config /home/daniel/.dotfiles/config/oh-my-posh/custom.json)"
+export PATH="$HOME/.cargo/bin:$PATH"
 export TCL_LIBRARY=/usr/lib/tcl8.6
 export TK_LIBRARY=/usr/lib/tk8.6
-` 
+```
 
+## Validation
 
+Run shell syntax checks before committing changes:
+
+```bash
+find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
+```
+
+Use ShellCheck when available. Test installation behavior with dry runs and a disposable home/config directory before applying changes to a live Omarchy session.

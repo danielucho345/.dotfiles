@@ -1,51 +1,19 @@
-
-#!/bin/bash
-set -euo pipefail
-
-SOURCE_DIR="$(dirname "$0")/desktop-apps"
-TARGET_DIR="$HOME/.local/share/applications"
-
-# Ensure directories exist
-mkdir -p "$TARGET_DIR"
-
-echo "=== Desktop Application Override Installer ==="
-echo "Source directory: $SOURCE_DIR"
-echo "Target directory: $TARGET_DIR"
-echo
-
-# Check if the source directory exists
-if [ ! -d "$SOURCE_DIR" ]; then
-    echo "Error: $SOURCE_DIR does not exist."
-    exit 1
-fi
-
-# Iterate through every .desktop file in desktop-apps
-shopt -s nullglob
-for desktop_file in "$SOURCE_DIR"/*.desktop; do
-    filename=$(basename "$desktop_file")
-    system_path="/usr/share/applications/$filename"
-    target_path="$TARGET_DIR/$filename"
-
-    echo "Processing: $filename"
-
-    # Warn if the system version exists
-    if [ -f "$system_path" ]; then
-        echo "  → System file detected: $system_path"
-        echo "    (Will be overridden in user directory)"
-    else
-        echo "  → No system file exists. Installing new launcher."
-    fi
-
-    # Copy your version
-    echo "  → Installing user override: $target_path"
-    cp "$desktop_file" "$target_path"
-
-    # Update desktop database (safe, recommended)
-    update-desktop-database "$TARGET_DIR" >/dev/null 2>&1 || true
-
-    echo "  ✓ Completed override for $filename"
-    echo
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_DIR="$ROOT/desktop-apps"
+TARGET_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+DRY_RUN=false
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
+[[ -z "${1:-}" || "$DRY_RUN" == true ]] || { echo "Usage: $0 [--dry-run]" >&2; exit 2; }
+[[ -d "$SOURCE_DIR" ]] || { echo "Missing directory: $SOURCE_DIR" >&2; exit 1; }
+for file in "$SOURCE_DIR"/*.desktop; do
+  [[ -f "$file" ]] || continue
+  command -v desktop-file-validate >/dev/null 2>&1 && desktop-file-validate "$file"
+  target="$TARGET_DIR/$(basename "$file")"
+  if $DRY_RUN; then echo "Would install $file -> $target"; continue; fi
+  mkdir -p "$TARGET_DIR"
+  if [[ -e "$target" ]]; then cp -a -- "$target" "$target.bak.$(date +%Y%m%d-%H%M%S)"; fi
+  cp -- "$file" "$target"
 done
-
-echo "All desktop applications processed successfully."
-
+if ! $DRY_RUN && command -v update-desktop-database >/dev/null 2>&1; then update-desktop-database "$TARGET_DIR" >/dev/null 2>&1 || true; fi

@@ -1,4 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+if [[ "${1:-}" == "--dry-run" ]]; then
+    echo "Would install/configure PostgreSQL without deleting existing data."
+    exit 0
+fi
 
 # Install PostgreSQL
 echo "Installing PostgreSQL..."

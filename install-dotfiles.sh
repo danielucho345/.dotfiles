@@ -1,54 +1,45 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-#!/bin/bash
-set -euo pipefail
-
-DOTFILES_DIR="$HOME/.dotfiles"
-CONFIG_DIR="$DOTFILES_DIR/config"
-
-echo "  ==== STARTING DOTFILES ======="
-# Ensure stow is installed
-if ! command -v stow >/dev/null 2>&1; then
-  echo "Error: stow not found."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="$SCRIPT_DIR/config"
+DRY_RUN=false
+[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
+[[ -z "${1:-}" || "$DRY_RUN" == true ]] || { echo "Usage: $0 [--dry-run]" >&2; exit 2; }
+[[ -d "$CONFIG_DIR" ]] || { echo "Missing config directory: $CONFIG_DIR" >&2; exit 1; }
+if ! $DRY_RUN && ! command -v stow >/dev/null 2>&1; then
+  echo "stow is required; install it first" >&2
   exit 1
 fi
 
-# Ensure config folder exists
-if [ ! -d "$CONFIG_DIR" ]; then
-  echo "Error: $CONFIG_DIR does not exist."
-  exit 1
-fi
-
-echo "=== Cleaning old configs in ~/.config… ==="
-
-# Remove existing package folders/symlinks
-for package in "$CONFIG_DIR"/*; do
-  [ -d "$package" ] || continue
-  pkgname=$(basename "$package")
-  target="$HOME/.config/$pkgname"
-
-  
-  if [ -d "$target" ]; then
-      echo "  ...Removing old/default config: $target"
-      rm -rf "$target"
+conflicts=0
+for package_path in "$CONFIG_DIR"/*; do
+  [[ -d "$package_path" ]] || continue
+  package="$(basename "$package_path")"
+  target="$HOME/.config/$package"
+  echo "==> Checking $package -> $target"
+  if [[ -e "$target" || -L "$target" ]]; then
+    if [[ -L "$target" ]] && [[ "$(readlink -f "$target")" == "$package_path" ]]; then
+      echo "    already linked"
+    else
+      echo "    conflict: existing configuration will not be deleted"
+      conflicts=$((conflicts + 1))
+    fi
+    continue
   fi
-
-  if [ ! -L "$target" ]; then 
-    echo "  ...Creating folder for stow... $target" 
-    mkdir  "$target"
-  fi 
+  if $DRY_RUN; then
+    echo "    would create target and stow $package"
+  else
+    mkdir -p "$target"
+    if ! stow --verbose --dir="$CONFIG_DIR" --target="$target" "$package"; then
+      echo "    stow failed for $package" >&2
+      conflicts=$((conflicts + 1))
+    fi
+  fi
 done
 
-
-# Stow each package as a whole folder
-for package in "$CONFIG_DIR"/*; do
-  [ -d "$package" ] || continue
-  pkgname=$(basename "$package")
-  echo "  Stowing $pkgname"
-  echo "  stow comand --verbose --dir="$CONFIG_DIR" --target="$HOME/.config/$pkgname""
-  stow --verbose --dir="$CONFIG_DIR" --target="$HOME/.config/$pkgname" "$pkgname" || echo "ERROR STOWING $pkgname"
-done
-
-echo "Dotfiles installed successfully."
-
-
-echo "  ==== DONE DOTFILES ======="
+if (( conflicts > 0 )); then
+  echo "Completed with $conflicts conflict(s). No existing configuration was deleted." >&2
+  exit 1
+fi
+if $DRY_RUN; then echo "Dry run complete; no files changed."; else echo "Dotfiles installed safely."; fi
