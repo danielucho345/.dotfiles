@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "daniel.window-switcher",
+  "name": "Window finder",
+  "version": "1.0.0",
+  "author": "Daniel",
+  "description": "Search open windows in compact and monitor views",
+  "kinds": ["menu"],
+  "keepLoaded": true,
+  "entryPoints": { "menu": "WindowSwitcher.qml" }
+}

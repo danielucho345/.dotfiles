@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: hypr-window-switcher
+Usage: hypr-window-switcher [legacy | list --json | focus <address> | view [compact|monitors]]
 
 List open windows on regular Hyprland workspaces and focus the selected one.
 EOF
@@ -26,6 +26,85 @@ clean_text() {
 
 require_command hyprctl
 require_command jq
+
+snapshot() {
+  local clients workspaces monitors
+  clients="$(hyprctl -j clients)" || fail "could not query open windows"
+  workspaces="$(hyprctl -j workspaces)" || fail "could not query workspaces"
+  monitors="$(hyprctl -j monitors)" || fail "could not query monitors"
+  jq -en --argjson clients "$clients" --argjson workspaces "$workspaces" --argjson monitors "$monitors" '
+    if ([$clients, $workspaces, $monitors] | all(.[]; type == "array")) then
+      {monitors: ($monitors | sort_by(.x, .y, .name)),
+       windows: [$clients[] | select(.mapped != false and .workspace.id >= 0)
+         | . as $c | ($workspaces | map(select(.id == $c.workspace.id)) | first) as $w
+         | {address, class, initialClass, title, initialTitle, pid,
+            workspace: .workspace.id, workspaceName: (.workspace.name // (.workspace.id | tostring)),
+            monitor: ($w.monitor // "")}]
+      }
+    else error("Invalid Hyprland response") end'
+}
+
+focus_address() {
+  local address="$1" data target workspace monitor response actual
+  [[ "$address" =~ ^0x[[:xdigit:]]+$ ]] || fail "invalid window address"
+  data="$(snapshot)" || fail "could not refresh window data"
+  target="$(jq -ec --arg address "$address" '.windows[] | select(.address == $address)' <<<"$data")" \
+    || fail "that window is no longer available on a regular workspace"
+  workspace="$(jq -r .workspace <<<"$target")"
+  monitor="$(jq -r .monitor <<<"$target")"
+  jq -e --arg monitor "$monitor" 'any(.monitors[]; .name == $monitor)' <<<"$data" >/dev/null \
+    || fail "that window has no connected monitor"
+  # JSON string quoting also protects connector names in Lua dispatcher text.
+  response="$(hyprctl dispatch "hl.dsp.focus({ monitor = $(jq -Rn --arg v "$monitor" '$v') })" 2>/dev/null)" || response=""
+  [[ "$response" == ok ]] || hyprctl dispatch focusmonitor "$monitor" >/dev/null
+  response="$(hyprctl dispatch "hl.dsp.focus({ workspace = \"$workspace\" })" 2>/dev/null)" || response=""
+  [[ "$response" == ok ]] || hyprctl dispatch workspace "$workspace" >/dev/null
+  response="$(hyprctl dispatch "hl.dsp.focus({ window = \"address:$address\" })" 2>/dev/null)" || response=""
+  [[ "$response" == ok ]] || hyprctl dispatch focuswindow "address:$address" >/dev/null
+  for _ in {1..10}; do
+    actual="$(hyprctl -j activewindow | jq -r '.address // ""')" || actual=""
+    [[ "$actual" == "$address" ]] && return 0
+    sleep 0.05
+  done
+  fail "Hyprland did not focus the selected window"
+}
+
+view_state() {
+  local dir="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/window-switcher" tmp
+  if (($# == 0)); then
+    jq -er '.view | select(. == "compact" or . == "monitors")' "$dir/state.json" 2>/dev/null || printf '%s\n' compact
+    return
+  fi
+  [[ "$1" == compact || "$1" == monitors ]] || fail "unknown view: $1"
+  mkdir -p "$dir"
+  tmp="$(mktemp "$dir/.state.XXXXXX")"
+  jq -n --arg view "$1" '{view: $view}' > "$tmp"
+  mv -- "$tmp" "$dir/state.json"
+}
+
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  list) [[ "$#" == 2 && "$2" == --json ]] || fail "use list --json"; snapshot; exit ;;
+  focus) [[ "$#" == 2 ]] || fail "focus requires an address"; focus_address "$2"; exit ;;
+  view) shift; (($# <= 1)) || fail "view accepts one layout"; view_state "$@"; exit ;;
+  legacy) (($# == 1)) || fail "legacy accepts no arguments" ;;
+  '')
+    if command -v omarchy-shell >/dev/null &&
+       plugins="$(omarchy-shell shell listPlugins 2>/dev/null)" &&
+       jq -e 'any(.[]; .id == "daniel.window-switcher" and .enabled)' <<<"$plugins" >/dev/null; then
+      if omarchy-shell shell toggle daniel.window-switcher '{}'; then
+        # An enabled manifest can still have an unavailable/broken entry point.
+        # Confirm that an actual panel instance answered before skipping legacy.
+        for _ in {1..3}; do
+          if omarchy-shell shell call daniel.window-switcher status '{}' 2>/dev/null |
+             jq -e 'has("opened")' >/dev/null 2>&1; then exit 0; fi
+          sleep 0.05
+        done
+      fi
+    fi
+    ;;
+  *) usage >&2; exit 2 ;;
+esac
 require_command omarchy
 
 clients_json="$(hyprctl -j clients)" || fail "could not query open windows"
@@ -108,17 +187,5 @@ monitor="${monitors[selected_index]:-}"
 [[ -n "$address" ]] || fail "selected window is no longer available"
 [[ -n "$workspace_id" ]] || fail "selected window has no regular workspace"
 
-# Focus the target monitor and workspace before its window. Focusing a hidden
-# window alone does not reliably make its workspace visible on another output.
-if [[ -n "$monitor" && "$monitor" != "Unknown monitor" ]]; then
-  hyprctl dispatch "hl.dsp.focus({ monitor = \"${monitor}\" })" >/dev/null 2>&1 || \
-    hyprctl dispatch focusmonitor "$monitor" >/dev/null
-fi
-
-hyprctl dispatch "hl.dsp.focus({ workspace = \"${workspace_id}\" })" >/dev/null 2>&1 || \
-  hyprctl dispatch workspace "$workspace_id" >/dev/null
-
-# Lua dispatch syntax is used by current Hyprland/Omarchy releases; retain the
-# older form as a compatibility fallback for legacy configurations.
-hyprctl dispatch "hl.dsp.focus({ window = \"address:${address}\" })" >/dev/null 2>&1 || \
-  hyprctl dispatch focuswindow "address:${address}" >/dev/null
+# Re-query here too: legacy results can become stale while the menu is open.
+focus_address "$address"
