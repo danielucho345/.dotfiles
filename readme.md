@@ -48,6 +48,9 @@ The wallpaper operation installs the curated images, the `daniel.background`
 Omarchy plugin, and the `wallpaper-monitor` command. The plugin is a user-owned
 clone of Omarchy's background service, so Omarchy Shell, theme transitions, the
 global wallpaper picker, and the lock-screen fallback continue to work.
+The curated images are linked into
+`~/.config/omarchy/backgrounds/tokyo-night/`; they extend the stock Tokyo Night
+theme instead of appearing as a separate wallpaper-only theme.
 
 ```bash
 ./install-all.sh --dry-run wallpapers
