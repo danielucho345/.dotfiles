@@ -21,7 +21,7 @@ require_command() {
 clean_text() {
   # Hyprland titles may contain tabs or newlines; keep every entry on one menu
   # row, and leave printable UTF-8 text intact.
-  tr '[:cntrl:]' ' ' <<<"$1" | sed -E 's/\\\\[nrt]/ /g; s/[[:space:]]+/ /g; s/^ //; s/ $//'
+  tr '[:cntrl:]' ' ' <<<"$1" | sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
 }
 
 require_command hyprctl
@@ -33,9 +33,17 @@ workspaces_json="$(hyprctl -j workspaces)" || fail "could not query workspaces"
 
 declare -a options=()
 declare -a addresses=()
+declare -a workspace_ids=()
+declare -a monitors=()
 index=1
 
-while IFS=$'\t' read -r workspace_id app title address workspace_name monitor; do
+# NUL-delimited fields preserve empty titles/classes and literal backslashes.
+while IFS= read -r -d '' workspace_id &&
+      IFS= read -r -d '' app &&
+      IFS= read -r -d '' title &&
+      IFS= read -r -d '' address &&
+      IFS= read -r -d '' workspace_name &&
+      IFS= read -r -d '' monitor; do
   app="$(clean_text "$app")"
   title="$(clean_text "$title")"
   workspace_name="$(clean_text "$workspace_name")"
@@ -46,11 +54,13 @@ while IFS=$'\t' read -r workspace_id app title address workspace_name monitor; d
   [[ -n "$workspace_name" ]] || workspace_name="$workspace_id"
   [[ -n "$monitor" ]] || monitor="Unknown monitor"
 
-  options+=("󰖯\t${index}. ${app} — ${title}\tWorkspace ${workspace_name} · ${monitor}")
+  options+=("󰖯"$'\t'"${index}. ${app} — ${title}"$'\t'"Workspace ${workspace_name} · ${monitor}")
   addresses[index]="$address"
+  workspace_ids[index]="$workspace_id"
+  monitors[index]="$monitor"
   ((index += 1))
 done < <(
-  jq -r -n \
+  jq -j -n \
     --argjson clients "$clients_json" \
     --argjson workspaces "$workspaces_json" '
       [$workspaces[]
@@ -77,7 +87,7 @@ done < <(
           .workspace_name,
           .monitor
         ]
-      | @tsv'
+      | .[] | ., "\u0000"'
 )
 
 if ((${#options[@]} == 0)); then
@@ -93,7 +103,20 @@ fi
 
 selected_index="${BASH_REMATCH[1]}"
 address="${addresses[selected_index]:-}"
+workspace_id="${workspace_ids[selected_index]:-}"
+monitor="${monitors[selected_index]:-}"
 [[ -n "$address" ]] || fail "selected window is no longer available"
+[[ -n "$workspace_id" ]] || fail "selected window has no regular workspace"
+
+# Focus the target monitor and workspace before its window. Focusing a hidden
+# window alone does not reliably make its workspace visible on another output.
+if [[ -n "$monitor" && "$monitor" != "Unknown monitor" ]]; then
+  hyprctl dispatch "hl.dsp.focus({ monitor = \"${monitor}\" })" >/dev/null 2>&1 || \
+    hyprctl dispatch focusmonitor "$monitor" >/dev/null
+fi
+
+hyprctl dispatch "hl.dsp.focus({ workspace = \"${workspace_id}\" })" >/dev/null 2>&1 || \
+  hyprctl dispatch workspace "$workspace_id" >/dev/null
 
 # Lua dispatch syntax is used by current Hyprland/Omarchy releases; retain the
 # older form as a compatibility fallback for legacy configurations.
