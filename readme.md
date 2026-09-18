@@ -157,10 +157,10 @@ Use ShellCheck when available. Test installation behavior with dry runs and a di
 
 ## ActivityWatch on Hyprland
 
-ActivityWatch is an explicit opt-in operation. The integration installs the `activitywatch-bin` AUR package, disables its duplicate desktop autostart, builds the pinned `aw-watcher-window-hyprland` submodule into `~/.local/bin`, and enables three user services: `aw-server-rust`, `aw-watcher-afk`, and `aw-watcher-window-hyprland`.
+ActivityWatch is an explicit opt-in operation. The integration installs the `activitywatch-bin` AUR package, disables its duplicate desktop autostart, builds the pinned `awatcher` submodule without the optional GNOME/KDE integrations, and enables two user services: `aw-server-rust` and `aw-awatcher`.
 
-The prototype tracks idle/active status and the focused Hyprland application, window, and workspace locally. Browser URL tracking is intentionally not enabled. ActivityWatch data is stored under `~/.local/share/activitywatch`; configuration is under `~/.config/activitywatch`; logs are under `~/.cache/activitywatch`.
+`awatcher` uses Hyprland's native Wayland protocols to track idle/active status and the focused application and window. It writes new events to `aw-watcher-afk_<hostname>` and `aw-watcher-window_<hostname>`. The previous `aw-watcher-window-hyprland_<hostname>` and `aw-watcher-workspace-hyprland_<hostname>` buckets remain available as history but receive no new events. Browser URL tracking is intentionally not enabled. ActivityWatch data is stored under `~/.local/share/activitywatch`; configuration is under `~/.config/activitywatch`; logs are under `~/.cache/activitywatch`.
 
-Preview the operation with `./install-all.sh --dry-run activitywatch`. Check it with `systemctl --user status aw-server-rust aw-watcher-afk aw-watcher-window-hyprland` and `journalctl --user -u aw-watcher-window-hyprland`. The local ActivityWatch API is available at `http://127.0.0.1:5600`.
+Preview the operation with `./install-all.sh --dry-run activitywatch`. Check it with `systemctl --user status aw-server-rust aw-awatcher` and `journalctl --user -u aw-awatcher`. The local ActivityWatch API is available at `http://127.0.0.1:5600`.
 
-To stop collection, run `systemctl --user disable --now aw-server-rust aw-watcher-afk aw-watcher-window-hyprland`. No browser watcher or remote synchronization is configured.
+To stop collection, run `systemctl --user disable --now aw-server-rust aw-awatcher`. To uninstall the managed watcher, also run `systemctl --user unlink aw-awatcher.service`, remove `~/.local/bin/awatcher`, and optionally unmask `app-aw\x2dqt@autostart.service` if the packaged ActivityWatch desktop launcher should manage startup again. Existing ActivityWatch data is not removed. No browser watcher or remote synchronization is configured.
