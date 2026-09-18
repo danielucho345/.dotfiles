@@ -19,7 +19,9 @@ hyprctl() {
     '-j workspaces')
       printf '%s\n' '[{"id":1,"monitor":"DP-1"},{"id":5,"monitor":"DP-2"}]'
       ;;
-    dispatch*) printf '%s\n' "$*" >> "$SWITCHER_TEST_LOG" ;;
+    '-j monitors') printf '%s\n' '[{"name":"DP-1","x":0,"y":0},{"name":"DP-2","x":1920,"y":0}]' ;;
+    '-j activewindow') printf '%s\n' '{"address":"0xb"}' ;;
+    dispatch*) printf '%s\n' "$*" >> "$SWITCHER_TEST_LOG"; printf '%s\n' ok ;;
     *) return 1 ;;
   esac
 }
@@ -41,12 +43,12 @@ omarchy() {
 }
 
 export -f hyprctl omarchy
-bash "$SWITCHER_UNDER_TEST"
+bash "$SWITCHER_UNDER_TEST" legacy
 expected=$'dispatch hl.dsp.focus({ monitor = "DP-2" })\ndispatch hl.dsp.focus({ workspace = "5" })\ndispatch hl.dsp.focus({ window = "address:0xb" })'
 [[ "$(<"$SWITCHER_TEST_LOG")" == "$expected" ]]
 printf '%s\n' 'PASS: real menu row parsing reaches the selected window'
 
 : > "$SWITCHER_TEST_LOG"
-SWITCHER_CANCEL=true bash "$SWITCHER_UNDER_TEST"
+SWITCHER_CANCEL=true bash "$SWITCHER_UNDER_TEST" legacy
 [[ ! -s "$SWITCHER_TEST_LOG" ]]
 printf '%s\n' 'PASS: cancellation does not dispatch a focus command'
