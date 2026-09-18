@@ -27,6 +27,7 @@ done
 if $DRY_RUN; then
   echo "+ yay -S --needed --noconfirm activitywatch-bin"
   echo "+ cargo install --locked --path $WATCHER_DIR --root $INSTALL_ROOT"
+  echo "+ systemctl --user mask --now app-aw\\x2dqt@autostart.service"
   echo "+ systemctl --user daemon-reload"
   echo "+ systemctl --user enable --now aw-server-rust.service aw-watcher-afk.service aw-watcher-window-hyprland.service"
   exit 0
@@ -36,6 +37,9 @@ yay -S --needed --noconfirm activitywatch-bin
 mkdir -p "$INSTALL_ROOT"
 cargo install --locked --path "$WATCHER_DIR" --root "$INSTALL_ROOT"
 
+# The package's desktop autostart launches duplicate AFK and X11 window
+# watchers. This setup manages the server and Hyprland watchers as user units.
+systemctl --user mask --now 'app-aw\x2dqt@autostart.service'
 systemctl --user link \
   "$UNIT_DIR/aw-server-rust.service" \
   "$UNIT_DIR/aw-watcher-afk.service" \
