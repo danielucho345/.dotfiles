@@ -135,6 +135,18 @@ it on different hardware. The installer checks the existing config, avoids
 duplicate source lines, creates a backup, and validates with `hyprctl reload`
 and `hyprctl configerrors` when a Hyprland session is available.
 
+`./install-all.sh hyprland` also links `hypr-window-switcher` into
+`~/.local/bin/`. `Super+E` opens a searchable list of windows on regular
+workspaces. Each result includes its application/title, workspace, and monitor;
+choosing it focuses that exact window, including when it is on another monitor.
+Scratchpad windows are intentionally not listed because they do not have a
+persistent monitor location.
+
+To remove this feature, delete the `SUPER + E` binding from the applicable
+override, then reload Hyprland. After confirming
+`~/.local/bin/hypr-window-switcher` still resolves to this repository's
+`bin/hypr-window-switcher`, remove that symlink with `unlink`.
+
 ## Shell environment and Oh My Posh
 
 ```bash

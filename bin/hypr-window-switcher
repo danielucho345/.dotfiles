@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: hypr-window-switcher
+
+List open windows on regular Hyprland workspaces and focus the selected one.
+EOF
+}
+
+fail() {
+  echo "hypr-window-switcher: $*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+clean_text() {
+  # Hyprland titles may contain tabs or newlines; keep every entry on one menu
+  # row, and leave printable UTF-8 text intact.
+  tr '[:cntrl:]' ' ' <<<"$1" | sed -E 's/\\\\[nrt]/ /g; s/[[:space:]]+/ /g; s/^ //; s/ $//'
+}
+
+require_command hyprctl
+require_command jq
+require_command omarchy
+
+clients_json="$(hyprctl -j clients)" || fail "could not query open windows"
+workspaces_json="$(hyprctl -j workspaces)" || fail "could not query workspaces"
+
+declare -a options=()
+declare -a addresses=()
+index=1
+
+while IFS=$'\t' read -r workspace_id app title address workspace_name monitor; do
+  app="$(clean_text "$app")"
+  title="$(clean_text "$title")"
+  workspace_name="$(clean_text "$workspace_name")"
+  monitor="$(clean_text "$monitor")"
+
+  [[ -n "$app" ]] || app="Unknown application"
+  [[ -n "$title" ]] || title="Untitled window"
+  [[ -n "$workspace_name" ]] || workspace_name="$workspace_id"
+  [[ -n "$monitor" ]] || monitor="Unknown monitor"
+
+  options+=("󰖯\t${index}. ${app} — ${title}\tWorkspace ${workspace_name} · ${monitor}")
+  addresses[index]="$address"
+  ((index += 1))
+done < <(
+  jq -r -n \
+    --argjson clients "$clients_json" \
+    --argjson workspaces "$workspaces_json" '
+      [$workspaces[]
+       | select(.id >= 0)
+       | { key: (.id | tostring), value: (.monitor // "Unknown monitor") }]
+      | from_entries as $monitor_by_workspace
+      | [$clients[]
+         | select(.workspace.id >= 0)
+         | {
+             workspace_id: .workspace.id,
+             workspace_name: (.workspace.name // (.workspace.id | tostring)),
+             monitor: ($monitor_by_workspace[(.workspace.id | tostring)] // "Unknown monitor"),
+             app: (.class // .initialClass // "Unknown application"),
+             title: (.title // .initialTitle // "Untitled window"),
+             address: .address
+           }]
+      | sort_by(.workspace_id, (.app | ascii_downcase), (.title | ascii_downcase))
+      | .[]
+      | [
+          (.workspace_id | tostring),
+          .app,
+          .title,
+          .address,
+          .workspace_name,
+          .monitor
+        ]
+      | @tsv'
+)
+
+if ((${#options[@]} == 0)); then
+  echo "hypr-window-switcher: no windows are open on regular workspaces" >&2
+  exit 0
+fi
+
+selection="$(omarchy menu select "Find open window" "${options[@]}" -- --width 640 --maxheight 600)" || exit 0
+
+if [[ ! $selection =~ ^([0-9]+)\. ]]; then
+  fail "could not identify the selected window"
+fi
+
+selected_index="${BASH_REMATCH[1]}"
+address="${addresses[selected_index]:-}"
+[[ -n "$address" ]] || fail "selected window is no longer available"
+
+# Lua dispatch syntax is used by current Hyprland/Omarchy releases; retain the
+# older form as a compatibility fallback for legacy configurations.
+hyprctl dispatch "hl.dsp.focus({ window = \"address:${address}\" })" >/dev/null 2>&1 || \
+  hyprctl dispatch focuswindow "address:${address}" >/dev/null
