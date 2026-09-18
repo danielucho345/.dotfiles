@@ -19,7 +19,8 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ./install-all.sh packages             # explicit package manifest
 ./install-all.sh dotfiles             # refuses existing config conflicts
 ./install-all.sh shell                # enable Oh My Posh in Bash and Zsh
-./install-all.sh hyprland             # opt-in; backs up hyprland.conf
+./install-all.sh wallpapers           # install monitor-aware Omarchy wallpapers
+./install-all.sh hyprland             # opt-in; installs version-aware overrides
 ./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
 ./install-all.sh desktop-launchers    # backs up existing launchers
 ./install-all.sh postgresql           # separate stateful setup
@@ -41,9 +42,53 @@ Every operation can be previewed with `--dry-run`. Scripts resolve paths from th
 - Never delete PostgreSQL data to undo setup.
 - Omarchy-owned files under `/usr/share/omarchy/` are never modified.
 
+## Monitor-specific wallpapers
+
+The wallpaper operation installs the curated images, the `daniel.background`
+Omarchy plugin, and the `wallpaper-monitor` command. The plugin is a user-owned
+clone of Omarchy's background service, so Omarchy Shell, theme transitions, the
+global wallpaper picker, and the lock-screen fallback continue to work.
+
+```bash
+./install-all.sh --dry-run wallpapers
+./install-all.sh wallpapers
+wallpaper-monitor select          # choose a connected monitor, then an image
+wallpaper-monitor select DP-1     # choose an image for a known output
+wallpaper-monitor clear DP-1      # return that output to the global background
+wallpaper-monitor apply           # reload saved assignments into Omarchy Shell
+hyprctl monitors                  # inspect connector names
+```
+
+Assignments are stored outside Git in
+`~/.local/state/omarchy/monitor-backgrounds.json`. Missing images and unknown
+outputs fall back to Omarchy's current global background. `Super+Ctrl+Space`
+keeps the global picker; after installing the Hyprland overrides,
+`Super+Ctrl+Shift+Space` opens the monitor-aware picker.
+
+If installation occurs outside a running desktop session, enable the plugin
+after logging in:
+
+```bash
+omarchy-shell shell rescanPlugins
+omarchy plugin enable daniel.background
+```
+
+Recovery is `omarchy plugin disable daniel.background`, which restores the
+built-in `omarchy.background` service. After major Omarchy updates, compare
+the dotfiles clone with
+`/usr/share/omarchy/shell/plugins/background/Background.qml` and merge relevant
+upstream fixes before re-enabling it.
+
 ## Hyprland notes
 
-Hyprland overrides are opt-in. The current overrides assume monitors named `DP-1` and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`, `wl-copy`, and ActivityWatch. Review `hyprland-overrides.conf` before enabling it on different hardware. The installer checks the existing config, avoids duplicate source lines, creates a backup, and validates with `hyprctl configerrors` when possible.
+Hyprland overrides are opt-in. Current Omarchy installations source
+`hyprland-overrides.lua`; legacy `hyprland.conf` installations continue to use
+`hyprland-overrides.conf`. The legacy overrides assume monitors named `DP-1`
+and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`,
+`wl-copy`, and ActivityWatch. Review the applicable override before enabling
+it on different hardware. The installer checks the existing config, avoids
+duplicate source lines, creates a backup, and validates with `hyprctl reload`
+and `hyprctl configerrors` when a Hyprland session is available.
 
 ## Shell environment and Oh My Posh
 

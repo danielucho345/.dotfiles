@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "daniel.background",
+  "name": "Daniel's Monitor Backgrounds",
+  "version": "1.0.0",
+  "author": "Daniel",
+  "description": "Omarchy background service with persistent per-monitor wallpaper overrides",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Background.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.background"
+  }
+}

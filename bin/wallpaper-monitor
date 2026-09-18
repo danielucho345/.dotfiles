@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_DIR="$STATE_HOME/omarchy"
+STATE_FILE="$STATE_DIR/monitor-backgrounds.json"
+DOTFILES_BACKGROUNDS="$CONFIG_HOME/omarchy/themes/tokyo-night-wallpapers/backgrounds"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  wallpaper-monitor select [output]
+  wallpaper-monitor clear <output>
+  wallpaper-monitor apply
+
+Choose and persist a wallpaper override for one connected monitor. Monitor
+names come from Hyprland (for example DP-1, DP-2, or eDP-1).
+EOF
+}
+
+fail() {
+  echo "wallpaper-monitor: $*" >&2
+  exit 1
+}
+
+require_command() {
+  command -v "$1" >/dev/null 2>&1 || fail "required command not found: $1"
+}
+
+empty_state() {
+  printf '%s\n' '{"version":1,"outputs":{}}'
+}
+
+read_state() {
+  if [[ ! -e "$STATE_FILE" ]]; then
+    empty_state
+    return
+  fi
+
+  jq -e '
+    type == "object"
+    and (.version == 1)
+    and ((.outputs | type) == "object")
+    and all(.outputs | to_entries[]; (.key | type) == "string" and (.value | type) == "string")
+  ' "$STATE_FILE" >/dev/null 2>&1 || fail "invalid state file: $STATE_FILE"
+  cat "$STATE_FILE"
+}
+
+dump_state() {
+  local raw output path valid
+
+  if ! raw="$(read_state 2>/dev/null)"; then
+    empty_state
+    return
+  fi
+
+  valid="$(empty_state)"
+  while IFS= read -r -d '' output && IFS= read -r -d '' path; do
+    [[ -n "$output" && -f "$path" ]] || continue
+    valid="$(jq -c --arg output "$output" --arg path "$path" \
+      '.outputs[$output] = $path' <<<"$valid")"
+  done < <(jq -j '.outputs | to_entries[] | .key, "\u0000", .value, "\u0000"' <<<"$raw")
+
+  jq -c . <<<"$valid"
+}
+
+write_state() {
+  local json="$1" tmp
+
+  mkdir -p "$STATE_DIR"
+  tmp="$(mktemp "$STATE_DIR/.monitor-backgrounds.XXXXXX")"
+  trap 'rm -f "${tmp:-}"' RETURN
+  printf '%s\n' "$json" >"$tmp"
+  chmod 600 "$tmp"
+  mv -f -- "$tmp" "$STATE_FILE"
+  trap - RETURN
+}
+
+connected_monitors() {
+  require_command hyprctl
+  require_command jq
+  hyprctl monitors -j 2>/dev/null
+}
+
+require_connected_output() {
+  local output="$1" monitors="$2"
+  jq -e --arg output "$output" 'any(.[]; .name == $output)' <<<"$monitors" >/dev/null \
+    || fail "monitor is not connected: $output"
+}
+
+choose_output() {
+  local monitors="$1" selection
+  local -a options=()
+
+  mapfile -t options < <(
+    jq -r '.[] | [.name, (.description // "Connected monitor")] | @tsv' <<<"$monitors"
+  )
+  ((${#options[@]} > 0)) || fail "Hyprland reports no connected monitors"
+
+  selection="$(omarchy menu select "Monitor" "${options[@]}")" || return 1
+  printf '%s\n' "${selection%%$'\t'*}"
+}
+
+image_directories() {
+  local theme_name="" dir
+  local -a candidates=()
+
+  if [[ -r "$STATE_HOME/omarchy/current/theme.name" ]]; then
+    theme_name="$(<"$STATE_HOME/omarchy/current/theme.name")"
+  fi
+
+  candidates+=("$STATE_HOME/omarchy/current/theme/backgrounds")
+  [[ -n "$theme_name" ]] && candidates+=("$CONFIG_HOME/omarchy/backgrounds/$theme_name")
+  candidates+=("$DOTFILES_BACKGROUNDS")
+
+  for dir in "${candidates[@]}"; do
+    [[ -d "$dir" ]] && printf '%s\0' "$dir"
+  done
+}
+
+notify_reload() {
+  if ! omarchy-shell background reloadMonitors >/dev/null 2>&1; then
+    echo "wallpaper-monitor: selection saved; run 'wallpaper-monitor apply' when Omarchy Shell is available" >&2
+  fi
+}
+
+select_wallpaper() {
+  local output="${1:-}" monitors current image state
+  local -a directories=()
+
+  require_command jq
+  require_command omarchy
+  monitors="$(connected_monitors)" || fail "could not query Hyprland monitors"
+
+  if [[ -z "$output" ]]; then
+    output="$(choose_output "$monitors")" || exit 0
+  fi
+  require_connected_output "$output" "$monitors"
+
+  while IFS= read -r -d '' current; do directories+=("$current"); done < <(image_directories)
+  ((${#directories[@]} > 0)) || fail "no wallpaper directories are available"
+
+  state="$(read_state)"
+  current="$(jq -r --arg output "$output" '.outputs[$output] // empty' <<<"$state")"
+  image="$(omarchy menu images --selected "$current" "${directories[@]}")" || exit 0
+  [[ -f "$image" ]] || fail "selected wallpaper does not exist: $image"
+  image="$(realpath -- "$image")"
+
+  state="$(jq -c --arg output "$output" --arg path "$image" \
+    '.outputs[$output] = $path' <<<"$state")"
+  write_state "$state"
+  notify_reload
+}
+
+clear_wallpaper() {
+  local output="${1:-}" state
+  [[ -n "$output" ]] || fail "clear requires a monitor output"
+  require_command jq
+
+  state="$(read_state)"
+  state="$(jq -c --arg output "$output" 'del(.outputs[$output])' <<<"$state")"
+  write_state "$state"
+  notify_reload
+}
+
+apply_wallpapers() {
+  omarchy-shell background reloadMonitors >/dev/null \
+    || fail "Omarchy Shell is not available"
+}
+
+command="${1:-}"
+case "$command" in
+  select)
+    shift
+    (($# <= 1)) || fail "select accepts at most one monitor output"
+    select_wallpaper "${1:-}"
+    ;;
+  clear)
+    shift
+    (($# == 1)) || fail "clear requires exactly one monitor output"
+    clear_wallpaper "$1"
+    ;;
+  apply)
+    shift
+    (($# == 0)) || fail "apply accepts no arguments"
+    apply_wallpapers
+    ;;
+  dump)
+    shift
+    (($# == 0)) || fail "dump accepts no arguments"
+    require_command jq
+    dump_state
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
