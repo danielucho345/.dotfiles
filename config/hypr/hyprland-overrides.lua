@@ -6,6 +6,8 @@ o.bind(
   "wallpaper-monitor select"
 )
 
+o.bind("SUPER + E", "Find open window", "hypr-window-switcher")
+
 -- Replace Omarchy's default SUPER + SHIFT + S binding.
 hl.unbind("SUPER + SHIFT + S")
 o.bind(
