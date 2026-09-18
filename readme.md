@@ -18,6 +18,7 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ```bash
 ./install-all.sh packages             # explicit package manifest
 ./install-all.sh dotfiles             # refuses existing config conflicts
+./install-all.sh shell                # enable Oh My Posh in Bash and Zsh
 ./install-all.sh hyprland             # opt-in; backs up hyprland.conf
 ./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
 ./install-all.sh desktop-launchers    # backs up existing launchers
@@ -44,14 +45,15 @@ Every operation can be previewed with `--dry-run`. Scripts resolve paths from th
 
 Hyprland overrides are opt-in. The current overrides assume monitors named `DP-1` and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`, `wl-copy`, and ActivityWatch. Review `hyprland-overrides.conf` before enabling it on different hardware. The installer checks the existing config, avoids duplicate source lines, creates a backup, and validates with `hyprctl configerrors` when possible.
 
-## Shell environment examples
+## Shell environment and Oh My Posh
 
 ```bash
-eval "$(oh-my-posh init bash --config /home/daniel/.dotfiles/config/oh-my-posh/custom.json)"
 export PATH="$HOME/.cargo/bin:$PATH"
 export TCL_LIBRARY=/usr/lib/tcl8.6
 export TK_LIBRARY=/usr/lib/tk8.6
 ```
+
+`./install-all.sh all` installs and configures Oh My Posh automatically. It adds a marked, repeatable block to `~/.bashrc` and, when relevant, `~/.zshrc`, using `~/.config` paths so it works after cloning elsewhere. Missing Oh My Posh or configuration files are ignored so shell startup remains usable. Run `./install-all.sh --dry-run shell` to preview changes.
 
 ## Validation
 
