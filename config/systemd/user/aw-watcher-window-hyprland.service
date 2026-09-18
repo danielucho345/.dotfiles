@@ -4,8 +4,9 @@ After=aw-server-rust.service
 Requires=aw-server-rust.service
 
 [Service]
+ExecStartPre=/usr/bin/bash -c 'until /usr/bin/curl --fail --silent --max-time 1 http://127.0.0.1:5600/api/0/info > /dev/null; do /usr/bin/sleep 1; done'
 ExecStart=%h/.local/bin/aw-watcher-window-hyprland --host 127.0.0.1 --port 5600 --poll-time 1
-Restart=on-failure
+Restart=always
 RestartSec=5
 
 [Install]

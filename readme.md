@@ -157,7 +157,7 @@ Use ShellCheck when available. Test installation behavior with dry runs and a di
 
 ## ActivityWatch on Hyprland
 
-ActivityWatch is an explicit opt-in operation. The integration installs the `activitywatch-bin` AUR package, builds the pinned `aw-watcher-window-hyprland` submodule into `~/.local/bin`, and enables three user services: `aw-server-rust`, `aw-watcher-afk`, and `aw-watcher-window-hyprland`.
+ActivityWatch is an explicit opt-in operation. The integration installs the `activitywatch-bin` AUR package, disables its duplicate desktop autostart, builds the pinned `aw-watcher-window-hyprland` submodule into `~/.local/bin`, and enables three user services: `aw-server-rust`, `aw-watcher-afk`, and `aw-watcher-window-hyprland`.
 
 The prototype tracks idle/active status and the focused Hyprland application, window, and workspace locally. Browser URL tracking is intentionally not enabled. ActivityWatch data is stored under `~/.local/share/activitywatch`; configuration is under `~/.config/activitywatch`; logs are under `~/.cache/activitywatch`.
 
