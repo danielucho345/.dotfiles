@@ -18,9 +18,19 @@ screen.
 
 ## Omarchy installation
 
-These files are repository assets for now; they are not activated
-automatically yet. In a later phase, they can be copied or linked into the
-current theme's user-background directory:
+These files are repository assets and can be exposed through the dedicated
+Stow package with:
+
+```bash
+./install-all.sh wallpapers
+```
+
+This links them into the future custom-theme scaffold at
+`~/.config/omarchy/themes/tokyo-night-wallpapers/`. The installer does not
+apply the theme or select a wallpaper.
+
+For manual setup without Stow, the current theme's user-background directory
+can be created with:
 
 ```bash
 mkdir -p ~/.config/omarchy/backgrounds/$(cat ~/.local/state/omarchy/current/theme.name)
@@ -28,3 +38,12 @@ mkdir -p ~/.config/omarchy/backgrounds/$(cat ~/.local/state/omarchy/current/them
 
 Then select one with `omarchy theme bg set <path-to-image>` or cycle through
 the current theme's available backgrounds with `omarchy theme bg next`.
+
+Preview and selection commands:
+
+```bash
+omarchy theme bg install
+omarchy theme bg-switcher
+omarchy theme bg set <path-to-image>
+omarchy theme bg next
+```

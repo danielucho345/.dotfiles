@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=false
 usage() { cat <<EOF
 Usage: $0 [--dry-run] [--list] <operation>
-Operations: packages, dotfiles, shell, hyprland, activitywatch, desktop-launchers, postgresql, all
+Operations: packages, dotfiles, shell, wallpapers, hyprland, activitywatch, desktop-launchers, postgresql, all
 EOF
 }
 run() { if $DRY_RUN; then echo "+ $*"; else "$@"; fi; }
@@ -34,6 +34,7 @@ case "$op" in
     fi;;
   dotfiles) run_script "$ROOT/install-dotfiles.sh";;
   shell) run_script "$ROOT/install/install-shell.sh";;
+  wallpapers) run_script "$ROOT/install/install-wallpapers.sh";;
   hyprland) run_script "$ROOT/install-hyprland-overrides.sh";;
   activitywatch) run_script "$ROOT/install/install-activitywatcher.sh";;
   desktop-launchers) run_script "$ROOT/desktop-generator.sh";;
