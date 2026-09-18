@@ -19,6 +19,7 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ./install-all.sh packages             # explicit package manifest
 ./install-all.sh dotfiles             # refuses existing config conflicts
 ./install-all.sh hyprland             # opt-in; backs up hyprland.conf
+./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
 ./install-all.sh desktop-launchers    # backs up existing launchers
 ./install-all.sh postgresql           # separate stateful setup
 ./install-all.sh all                  # packages, dotfiles, launchers only
@@ -61,3 +62,13 @@ find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
 ```
 
 Use ShellCheck when available. Test installation behavior with dry runs and a disposable home/config directory before applying changes to a live Omarchy session.
+
+## ActivityWatch on Hyprland
+
+ActivityWatch is an explicit opt-in operation. The integration installs the `activitywatch-bin` AUR package, builds the pinned `aw-watcher-window-hyprland` submodule into `~/.local/bin`, and enables three user services: `aw-server-rust`, `aw-watcher-afk`, and `aw-watcher-window-hyprland`.
+
+The prototype tracks idle/active status and the focused Hyprland application, window, and workspace locally. Browser URL tracking is intentionally not enabled. ActivityWatch data is stored under `~/.local/share/activitywatch`; configuration is under `~/.config/activitywatch`; logs are under `~/.cache/activitywatch`.
+
+Preview the operation with `./install-all.sh --dry-run activitywatch`. Check it with `systemctl --user status aw-server-rust aw-watcher-afk aw-watcher-window-hyprland` and `journalctl --user -u aw-watcher-window-hyprland`. The local ActivityWatch API is available at `http://127.0.0.1:5600`.
+
+To stop collection, run `systemctl --user disable --now aw-server-rust aw-watcher-afk aw-watcher-window-hyprland`. No browser watcher or remote synchronization is configured.

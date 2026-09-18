@@ -1,0 +1,12 @@
+[Unit]
+Description=ActivityWatch Hyprland window watcher
+After=aw-server-rust.service
+Requires=aw-server-rust.service
+
+[Service]
+ExecStart=%h/.local/bin/aw-watcher-window-hyprland --host 127.0.0.1 --port 5600 --poll-time 1
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

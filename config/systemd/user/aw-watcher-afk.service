@@ -1,0 +1,12 @@
+[Unit]
+Description=ActivityWatch AFK watcher
+After=aw-server-rust.service
+Requires=aw-server-rust.service
+
+[Service]
+ExecStart=/opt/activitywatch/aw-watcher-afk/aw-watcher-afk
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

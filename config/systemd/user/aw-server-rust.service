@@ -1,0 +1,10 @@
+[Unit]
+Description=ActivityWatch local server
+
+[Service]
+ExecStart=/opt/activitywatch/aw-server-rust/aw-server-rust
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
