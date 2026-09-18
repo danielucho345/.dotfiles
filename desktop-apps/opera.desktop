@@ -16,10 +16,10 @@ StartupWMClass=Opera
 [Desktop Action new-window]
 Name=New Window
 Exec=env GDK_SCALE=1 OZONE_PLATFORM=wayland opera --new-window
-TargetEnvironment=Unity
+# TargetEnvironment=Unity
 
 [Desktop Action new-private-window]
 Name=New Private Window
 Exec=env GDK_SCALE=1 OZONE_PLATFORM=wayland opera --incognito
-TargetEnvironment=Unity
+# TargetEnvironment=Unity
 

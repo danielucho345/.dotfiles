@@ -29,6 +29,48 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 
 Every operation can be previewed with `--dry-run`. Scripts resolve paths from their own location, so they can be run from another directory.
 
+`all` must be run as the normal user, without wrapping the command in `sudo`:
+
+```bash
+./install-all.sh --dry-run all
+./install-all.sh all
+```
+
+The package operation requests `sudo` only when `pacman` needs it. Running the
+whole installer with `sudo` changes `$HOME` to `/root`, installs user files for
+the root account, and may cause AUR tools to refuse to run.
+
+To omit a package and its matching desktop launcher temporarily without
+changing `install/packages.conf`, use `--skip`. It can be repeated when more
+than one package should be omitted:
+
+```bash
+./install-all.sh --dry-run --force --skip opera all
+./install-all.sh --force --skip opera all
+```
+
+The skipped package remains in the manifest and can be installed later with
+`./install-all.sh packages` after the package issue is resolved.
+
+## Replacing existing dotfiles
+
+The default `dotfiles` operation refuses an existing `~/.config/<package>`
+directory so that it cannot overwrite personal configuration. To replace only
+the files supplied by this repository, use:
+
+```bash
+./install-all.sh --dry-run --force dotfiles
+./install-all.sh --force dotfiles
+```
+
+`--force` does not delete complete configuration directories. It backs up each
+conflicting file under
+`~/.local/state/dotfiles-backups/<timestamp>/` and then lets GNU Stow install
+the repository files. Unrelated files and directories are preserved. This is
+particularly important for `~/.config/systemd`: the repository provides the
+ActivityWatch user units, but existing units such as `voxtype.service` and
+`*.wants` links must remain untouched. Review the backup before removing it.
+
 ## Safety and rollback
 
 - Existing dotfile conflicts stop installation; nothing is removed automatically.
