@@ -4,6 +4,6 @@
 [submodule "config/oh-my-posh"]
 	path = config/oh-my-posh
 	url = git@github.com:danielucho345/oh_my_posh.git
-[submodule "aw-watcher-window-hyprland"]
-	path = aw-watcher-window-hyprland
-	url = https://github.com/bobvanderlinden/aw-watcher-window-hyprland.git
+[submodule "awatcher"]
+	path = awatcher
+	url = https://github.com/2e3s/awatcher.git
