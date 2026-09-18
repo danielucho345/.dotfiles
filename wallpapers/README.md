@@ -18,18 +18,18 @@ screen.
 
 ## Omarchy installation
 
-These files are repository assets and can be exposed through the dedicated
-Stow package with:
+These files are repository assets and can be exposed through the wallpaper
+installer with:
 
 ```bash
 ./install-all.sh wallpapers
 ```
 
-This links them into the custom-theme scaffold at
-`~/.config/omarchy/themes/tokyo-night-wallpapers/`, installs the
-`daniel.background` monitor-aware background plugin, and links the
-`wallpaper-monitor` helper into `~/.local/bin`. The installer does not select a
-wallpaper.
+This links them into Tokyo Night's user-background directory at
+`~/.config/omarchy/backgrounds/tokyo-night/`, installs the `daniel.background`
+monitor-aware background plugin, and links the `wallpaper-monitor` helper into
+`~/.local/bin`. The wallpapers do not appear as a separate, incomplete Omarchy
+theme, and the installer does not select a wallpaper.
 
 Choose wallpapers per connected monitor with:
 
@@ -45,8 +45,8 @@ background directory, and this repository's curated collection. Selections
 persist in `~/.local/state/omarchy/monitor-backgrounds.json` and survive theme
 changes without modifying the repository.
 
-For manual setup without Stow, the current theme's user-background directory
-can be created with:
+For manual setup without the installer, create the current theme's
+user-background directory and place or link images there:
 
 ```bash
 mkdir -p ~/.config/omarchy/backgrounds/$(cat ~/.local/state/omarchy/current/theme.name)

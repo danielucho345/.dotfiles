@@ -5,7 +5,7 @@ STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 STATE_DIR="$STATE_HOME/omarchy"
 STATE_FILE="$STATE_DIR/monitor-backgrounds.json"
-DOTFILES_BACKGROUNDS="$CONFIG_HOME/omarchy/themes/tokyo-night-wallpapers/backgrounds"
+DOTFILES_BACKGROUNDS="$CONFIG_HOME/omarchy/backgrounds/tokyo-night"
 
 usage() {
   cat <<'EOF'
@@ -94,17 +94,18 @@ choose_output() {
   local -a options=()
 
   mapfile -t options < <(
-    jq -r '.[] | [.name, (.description // "Connected monitor")] | @tsv' <<<"$monitors"
+    jq -r '.[] | ["󰍹", (.description // "Connected monitor"), .name] | @tsv' <<<"$monitors"
   )
   ((${#options[@]} > 0)) || fail "Hyprland reports no connected monitors"
 
   selection="$(omarchy menu select "Monitor" "${options[@]}")" || return 1
-  printf '%s\n' "${selection%%$'\t'*}"
+  printf '%s\n' "${selection##*$'\t'}"
 }
 
 image_directories() {
   local theme_name="" dir
   local -a candidates=()
+  local -A seen=()
 
   if [[ -r "$STATE_HOME/omarchy/current/theme.name" ]]; then
     theme_name="$(<"$STATE_HOME/omarchy/current/theme.name")"
@@ -115,7 +116,10 @@ image_directories() {
   candidates+=("$DOTFILES_BACKGROUNDS")
 
   for dir in "${candidates[@]}"; do
-    [[ -d "$dir" ]] && printf '%s\0' "$dir"
+    if [[ -d "$dir" && -z "${seen[$dir]+x}" ]]; then
+      printf '%s\0' "$dir"
+      seen[$dir]=1
+    fi
   done
 }
 
