@@ -126,8 +126,8 @@ upstream fixes before re-enabling it.
 
 ## Hyprland notes
 
-Hyprland overrides are opt-in. Current Omarchy installations source
-`hyprland-overrides.lua`; legacy `hyprland.conf` installations continue to use
+Hyprland overrides are opt-in. Current Omarchy installations source the Stowed
+`~/.config/hypr/hyprland-overrides.lua`; legacy `hyprland.conf` installations continue to use
 `hyprland-overrides.conf`. The legacy overrides assume monitors named `DP-1`
 and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`,
 `wl-copy`, and ActivityWatch. Review the applicable override before enabling
