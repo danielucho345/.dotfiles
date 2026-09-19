@@ -84,6 +84,19 @@ ActivityWatch user units, but existing units such as `voxtype.service` and
 - Never delete PostgreSQL data to undo setup.
 - Omarchy-owned files under `/usr/share/omarchy/` are never modified.
 
+## History
+
+`history/` holds one dated note per change that rewrote state outside this
+repository — tracking databases, stateful services, anything a `git revert` would
+not undo. Each note records the symptom, the cause, what was changed, and where
+the backups live, so a surprising result months later can be traced to the change
+that caused it. Ordinary code changes belong in the commit log, not here.
+
+- [`history/2026-09-18-activitywatch-bucket-merge.md`](history/2026-09-18-activitywatch-bucket-merge.md)
+  — merged the retired Hyprland window bucket into the live one and deleted both
+  `*-hyprland_*` buckets, after a stale bucket had been shadowing the live one in
+  the ActivityWatch web UI.
+
 ## Monitor-specific wallpapers
 
 The wallpaper operation installs the curated images, the `daniel.background`
@@ -173,7 +186,7 @@ ActivityWatch is an explicit opt-in operation. The integration installs the `act
 
 `awatcher` uses Hyprland's native Wayland protocols to track idle/active status and the focused application and window. It writes new events to `aw-watcher-afk_<hostname>` and `aw-watcher-window_<hostname>`. Browser URL tracking is intentionally not enabled. ActivityWatch data is stored under `~/.local/share/activitywatch`; configuration is under `~/.config/activitywatch`; logs are under `~/.cache/activitywatch`.
 
-The installer then runs `install/migrate-activitywatch-buckets.sh`, which folds the retired `aw-watcher-window-hyprland_<hostname>` history into the live window bucket and removes both `*-hyprland_<hostname>` buckets. Leaving them in place would break the web UI: the Activity view reads a single bucket of type `currentwindow` and picks the first one the server returns, so a stale bucket silently shadows the live one and the graphs disagree with the timeline. Both watchers use the same Wayland `app_id` naming, so categories apply unchanged across the merged history. The workspace bucket is archived rather than merged because `awatcher` records no workspace events. Every bucket is exported to `~/.local/state/dotfiles-backups/<timestamp>/activitywatch/` first, and the script is idempotent — it exits without changes once the legacy buckets are gone. It can also be run on its own with `--dry-run`.
+The installer then runs `install/migrate-activitywatch-buckets.sh`, which folds the retired `aw-watcher-window-hyprland_<hostname>` history into the live window bucket and removes both `*-hyprland_<hostname>` buckets. Leaving them in place would break the web UI: the Activity view reads a single bucket of type `currentwindow` and picks the first one the server returns, so a stale bucket silently shadows the live one and the graphs disagree with the timeline. Both watchers use the same Wayland `app_id` naming, so categories apply unchanged across the merged history. The workspace bucket is archived rather than merged because `awatcher` records no workspace events. Every bucket is exported to `~/.local/state/dotfiles-backups/<timestamp>/activitywatch/` first, and the script is idempotent — it exits without changes once the legacy buckets are gone. It can also be run on its own with `--dry-run`, and pointed at another server with `AW_SERVER_URL` — useful for rehearsing it against `aw-server-rust --testing` before touching live data. The 2026-09-18 run of this migration is recorded in `history/`.
 
 Preview the operation with `./install-all.sh --dry-run activitywatch`. Check it with `systemctl --user status aw-server-rust aw-awatcher` and `journalctl --user -u aw-awatcher`. The local ActivityWatch API is available at `http://127.0.0.1:5600`.
 
