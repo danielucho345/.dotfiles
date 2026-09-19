@@ -8,6 +8,7 @@ WATCHER_BIN="$INSTALL_ROOT/bin/awatcher"
 LEGACY_WATCHER_BIN="$INSTALL_ROOT/bin/aw-watcher-window-hyprland"
 UNIT_DIR="$ROOT/config/systemd/user"
 USER_UNIT_DIR="$HOME/.config/systemd/user"
+MIGRATE_SCRIPT="$ROOT/install/migrate-activitywatch-buckets.sh"
 LEGACY_UNITS=(aw-watcher-afk.service aw-watcher-window-hyprland.service)
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
@@ -22,6 +23,7 @@ require_command() { command -v "$1" >/dev/null 2>&1 || { echo "$1 is required" >
 for unit in aw-server-rust.service aw-awatcher.service; do
   [[ -f "$UNIT_DIR/$unit" ]] || { echo "Missing service unit: $UNIT_DIR/$unit" >&2; exit 1; }
 done
+[[ -x "$MIGRATE_SCRIPT" ]] || { echo "Missing bucket migration: $MIGRATE_SCRIPT" >&2; exit 1; }
 
 if $DRY_RUN; then
   echo "+ yay -S --needed --noconfirm activitywatch-bin"
@@ -32,12 +34,14 @@ if $DRY_RUN; then
   echo "+ systemctl --user disable --now ${LEGACY_UNITS[*]}"
   echo "+ systemctl --user enable --now aw-server-rust.service aw-awatcher.service"
   echo "+ remove known obsolete unit symlinks and $LEGACY_WATCHER_BIN"
+  echo "+ $MIGRATE_SCRIPT"
   exit 0
 fi
 
 require_command yay
 require_command cargo
 require_command systemctl
+require_command python3
 
 yay -S --needed --noconfirm activitywatch-bin
 mkdir -p "$INSTALL_ROOT"
@@ -80,5 +84,9 @@ for unit in "${LEGACY_UNITS[@]}"; do
 done
 [[ -e "$LEGACY_WATCHER_BIN" ]] && rm -f "$LEGACY_WATCHER_BIN"
 systemctl --user daemon-reload
+
+# Retiring the units leaves the legacy buckets in aw-server, where they shadow
+# the live window bucket in the web UI. Idempotent: a no-op once they are gone.
+"$MIGRATE_SCRIPT"
 
 echo "ActivityWatch and awatcher are installed and running."
