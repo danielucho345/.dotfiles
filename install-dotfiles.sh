@@ -5,11 +5,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$SCRIPT_DIR/config"
 DRY_RUN=false
 FORCE=false
+ONLY_PACKAGES=()
 while (($#)); do
   case "$1" in
     --dry-run) DRY_RUN=true; shift ;;
     --force) FORCE=true; shift ;;
-    *) echo "Usage: $0 [--dry-run] [--force]" >&2; exit 2 ;;
+    --only)
+      (($# >= 2)) || { echo "--only requires a package name" >&2; exit 2; }
+      [[ "$2" != */* && -d "$CONFIG_DIR/$2" ]] || { echo "Unknown config package: $2" >&2; exit 2; }
+      ONLY_PACKAGES+=("$2"); shift 2 ;;
+    *) echo "Usage: $0 [--dry-run] [--force] [--only <package>]..." >&2; exit 2 ;;
   esac
 done
 [[ -d "$CONFIG_DIR" ]] || { echo "Missing config directory: $CONFIG_DIR" >&2; exit 1; }
@@ -84,6 +89,13 @@ prepare_force() {
 for package_path in "$CONFIG_DIR"/*; do
   [[ -d "$package_path" ]] || continue
   package="$(basename "$package_path")"
+  if ((${#ONLY_PACKAGES[@]})); then
+    selected=false
+    for candidate in "${ONLY_PACKAGES[@]}"; do
+      [[ "$candidate" != "$package" ]] || selected=true
+    done
+    $selected || continue
+  fi
   target="$HOME/.config/$package"
   echo "==> Checking $package -> $target"
   if $FORCE; then
@@ -101,11 +113,15 @@ for package_path in "$CONFIG_DIR"/*; do
   elif [[ -e "$target" || -L "$target" ]]; then
     if [[ -L "$target" ]] && [[ "$(readlink -f "$target")" == "$package_path" ]]; then
       echo "    already linked"
+      continue
+    elif [[ -d "$target" && ! -L "$target" ]] && command -v stow >/dev/null 2>&1 &&
+         stow --simulate --dir="$CONFIG_DIR" --target="$target" "$package"; then
+      echo "    compatible existing directory; unrelated content will be preserved"
     else
       echo "    conflict: existing configuration will not be deleted"
       conflicts=$((conflicts + 1))
+      continue
     fi
-    continue
   fi
   if $DRY_RUN; then
     echo "    would create target and stow $package"

@@ -1,5 +1,6 @@
 -- Personal Hyprland overrides for current Omarchy releases.
 
+hl.unbind("SUPER + CTRL + SHIFT + code:65")
 o.bind(
   "SUPER + CTRL + SHIFT + code:65",
   "Monitor wallpaper picker",

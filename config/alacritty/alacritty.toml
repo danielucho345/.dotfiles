@@ -43,3 +43,8 @@ bright.blue = "#61AFEF"
 bright.magenta = "#C678DD"
 bright.cyan = "#56B6C2"
 bright.white = "#FFFFFF"
+
+[[keyboard.bindings]]
+key = "Return"
+mods = "Shift"
+chars = "\u001B\r"

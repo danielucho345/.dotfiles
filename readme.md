@@ -11,7 +11,7 @@ Review the scripts and run a dry run first:
 ./install-all.sh --dry-run all
 ```
 
-The scripts install Arch/AUR packages, optionally link configuration with GNU Stow, optionally source Hyprland overrides, and install user desktop launchers. Package installation requires `sudo`; AUR installation requires `yay`.
+The scripts install Arch/AUR packages, optionally link configuration with GNU Stow, optionally restore desktop settings and source Hyprland overrides, and install user desktop launchers. Package installation requires `sudo`; AUR installation requires `yay`.
 
 ## Operations
 
@@ -19,12 +19,13 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ./install-all.sh packages             # explicit package manifest
 ./install-all.sh dotfiles             # refuses existing config conflicts
 ./install-all.sh shell                # enable Oh My Posh in Bash and Zsh
+./install-all.sh desktop-settings     # restore tracked bar and idle preferences
 ./install-all.sh wallpapers           # install monitor-aware Omarchy wallpapers
 ./install-all.sh hyprland             # opt-in; installs version-aware overrides
 ./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
 ./install-all.sh desktop-launchers    # backs up existing launchers
 ./install-all.sh postgresql           # separate stateful setup
-./install-all.sh all                  # packages, dotfiles, launchers only
+./install-all.sh all                  # packages, dotfiles, shell, desktop launchers only
 ```
 
 Every operation can be previewed with `--dry-run`. Scripts resolve paths from their own location, so they can be run from another directory.
@@ -54,9 +55,8 @@ The skipped package remains in the manifest and can be installed later with
 
 ## Replacing existing dotfiles
 
-The default `dotfiles` operation refuses an existing `~/.config/<package>`
-directory so that it cannot overwrite personal configuration. To replace only
-the files supplied by this repository, use:
+The default `dotfiles` operation accepts compatible existing directories and
+repository links, preserves unrelated files, and refuses conflicting files. To replace only the files supplied by this repository, use:
 
 ```bash
 ./install-all.sh --dry-run --force dotfiles
@@ -84,6 +84,47 @@ ActivityWatch user units, but existing units such as `voxtype.service` and
 - Never delete PostgreSQL data to undo setup.
 - Omarchy-owned files under `/usr/share/omarchy/` are never modified.
 
+## Restore desktop settings explicitly
+
+`all` leaves desktop configuration opt-in. Restore a desktop in this order,
+previewing each command with `--dry-run` first:
+
+```bash
+./install-all.sh --force dotfiles
+./install-all.sh desktop-settings
+./install-all.sh wallpapers
+./install-all.sh hyprland
+```
+
+For a focused update on an existing machine, replace the first command with:
+
+```bash
+./install-dotfiles.sh --force --only hypr --only alacritty --only tmux
+```
+
+The tracked Hyprland input settings select US and Spanish (Spain), with Left
+Ctrl + Left Alt switching. Alacritty preserves Shift + Enter as ESC followed
+by carriage return. The tmux config tracks the active Omarchy bindings and
+appearance without TPM/session-restoration plugins.
+
+`defaults/omarchy-shell.json` holds the selected bar layout and idle settings
+(150 seconds for the screensaver, 300 seconds for locking). These currently
+match the packaged defaults, but tracking them pins the chosen behavior.
+`desktop-settings` merges only `bar` and `idle` into a normal live
+`~/.config/omarchy/shell.json`; plugin registrations and other fields survive.
+It refuses differing settings or a symlink unless `--force` is supplied, which
+backs up the original before replacing it. Invalid JSON must be repaired first.
+Identical settings are a no-op. Omarchy Shell hot-reloads the file; later UI
+changes stay local until deliberately copied back into the template.
+
+Rollback: restore the conflicting dotfiles from the printed
+`dotfiles-backups` directory, restore `shell.json` from its printed `.bak.*`
+directory, and restore the backed-up Hyprland main/bindings files from their
+`dotfiles.bak.*` directory. Reload Hyprland and check `hyprctl configerrors`.
+Restore wallpaper state from its `.bak.*` directory when one was created,
+then run `wallpaper-monitor apply`. Keep the repository checkout at a permanent
+path so live symlinks survive worktree cleanup.
+
 ## Monitor-specific wallpapers
 
 The wallpaper operation installs the curated images, the `daniel.background`
@@ -105,8 +146,13 @@ hyprctl monitors                  # inspect connector names
 ```
 
 Assignments are stored outside Git in
-`~/.local/state/omarchy/monitor-backgrounds.json`. Missing images and unknown
-outputs fall back to Omarchy's current global background. `Super+Ctrl+Space`
+`~/.local/state/omarchy/monitor-backgrounds.json`. The tracked
+`defaults/monitor-backgrounds.json` uses portable filenames: DP-1 defaults to
+sailboat beach and DP-2 to street shop atmosphere. Installation seeds only
+missing output assignments using the installed background directory, preserving
+all saved selections. Modified existing state is backed up and replaced
+atomically; malformed state stops installation before assets are changed.
+Missing images and unknown outputs fall back to Omarchy's current global background. `Super+Ctrl+Space`
 keeps the global picker; after installing the Hyprland overrides,
 `Super+Ctrl+Shift+Space` opens the monitor-aware picker.
 
@@ -131,8 +177,10 @@ Hyprland overrides are opt-in. Current Omarchy installations source the Stowed
 `hyprland-overrides.conf`. The legacy overrides assume monitors named `DP-1`
 and `DP-2`, and optional commands such as `ddcutil`, `grim`, `slurp`,
 `wl-copy`, and ActivityWatch. Review the applicable override before enabling
-it on different hardware. The installer checks the existing config, avoids
-duplicate source lines, creates a backup, and validates with `hyprctl reload`
+it on different hardware. The installer normalizes the Lua override load to a single
+`require("hypr.hyprland-overrides")` in the main config and removes old direct
+loads from the main config and bindings file. It backs up all affected files
+before editing them and validates with `hyprctl reload`
 and `hyprctl configerrors` when a Hyprland session is available.
 
 `./install-all.sh hyprland` also links `hypr-window-switcher` into
@@ -163,6 +211,13 @@ Run shell syntax checks before committing changes:
 
 ```bash
 find . -name '*.sh' -print0 | xargs -0 -n1 bash -n
+```
+
+Run the disposable-home installer regression tests:
+
+```bash
+python3 tests/desktop-installers.py
+bash tests/hypr-window-switcher.sh
 ```
 
 Use ShellCheck when available. Test installation behavior with dry runs and a disposable home/config directory before applying changes to a live Omarchy session.

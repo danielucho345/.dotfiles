@@ -11,9 +11,11 @@ PLUGIN_SOURCE="$PACKAGE_ROOT/plugins/daniel.background"
 PLUGIN_TARGET="${XDG_CONFIG_HOME:-$HOME/.config}/omarchy/plugins/daniel.background"
 HELPER_SOURCE="$ROOT/bin/wallpaper-monitor"
 HELPER_TARGET="$HOME/.local/bin/wallpaper-monitor"
+DEFAULTS="$ROOT/defaults/monitor-backgrounds.json"
+STATE_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/monitor-backgrounds.json"
 DRY_RUN=false
 [[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true
-[[ -z "${1:-}" || "$DRY_RUN" == true ]] || { echo "Usage: $0 [--dry-run]" >&2; exit 2; }
+[[ $# == 0 || ( $# == 1 && "$DRY_RUN" == true ) ]] || { echo "Usage: $0 [--dry-run]" >&2; exit 2; }
 
 [[ -d "$WALLPAPER_SOURCE" ]] || {
   echo "Missing wallpaper package: $WALLPAPER_SOURCE" >&2
@@ -32,6 +34,56 @@ if ! command -v omarchy >/dev/null 2>&1; then
   echo "omarchy is required" >&2
   exit 1
 fi
+
+command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
+state_schema='type == "object" and .version == 1
+  and (.outputs | type) == "object"
+  and all(.outputs | to_entries[]; (.value | type) == "string")'
+jq -e "$state_schema" "$DEFAULTS" >/dev/null || { echo "Invalid wallpaper defaults: $DEFAULTS" >&2; exit 1; }
+while IFS= read -r -d '' filename; do
+  [[ -n "$filename" && "$filename" != */* && -f "$WALLPAPER_SOURCE/$filename" ]] || {
+    echo "Invalid or missing default wallpaper: $filename" >&2; exit 1;
+  }
+done < <(jq -j '.outputs[] | ., "\u0000"' "$DEFAULTS")
+current='{"version":1,"outputs":{}}'
+if [[ -e "$STATE_FILE" || -L "$STATE_FILE" ]]; then
+  jq -e "$state_schema" "$STATE_FILE" >/dev/null || {
+    echo "Invalid wallpaper state: $STATE_FILE; repair it or move it aside before reinstalling." >&2
+    exit 1
+  }
+  current="$(cat "$STATE_FILE")"
+fi
+seeded="$(jq --slurpfile defaults "$DEFAULTS" --arg directory "$WALLPAPER_TARGET" '
+  reduce ($defaults[0].outputs | to_entries[]) as $entry (.;
+    if .outputs | has($entry.key) then .
+    else .outputs[$entry.key] = ($directory + "/" + $entry.value) end)
+' <<<"$current")"
+
+seed_assignments() {
+  if jq -e --argjson seeded "$seeded" '. == $seeded' <<<"$current" >/dev/null; then
+    echo "Saved monitor assignments already present; preserved."
+    return
+  fi
+  if $DRY_RUN; then
+    echo "Would seed missing monitor assignments in $STATE_FILE, preserving existing selections."
+    return
+  fi
+  mkdir -p "$(dirname "$STATE_FILE")"
+  if [[ -e "$STATE_FILE" || -L "$STATE_FILE" ]]; then
+    local backup
+    backup="$(mktemp -d "${STATE_FILE}.bak.$(date +%Y%m%d-%H%M%S).XXXXXX")"
+    cp -aL -- "$STATE_FILE" "$backup/monitor-backgrounds.json"
+    echo "Backed up monitor assignments to $backup"
+  fi
+  local tmp
+  tmp="$(mktemp "$(dirname "$STATE_FILE")/.monitor-backgrounds.XXXXXX")"
+  trap 'rm -f -- "$tmp"' RETURN
+  printf '%s\n' "$seeded" > "$tmp"
+  chmod 600 "$tmp"
+  mv -fT -- "$tmp" "$STATE_FILE"
+  trap - RETURN
+  echo "Seeded missing monitor assignments."
+}
 
 link_path() {
   local source="$1" target="$2" label="$3"
@@ -108,6 +160,25 @@ link_wallpapers() {
 
 omarchy plugin validate "$PLUGIN_SOURCE"
 
+# Check all links before removing the legacy theme or installing any assets.
+check_path() {
+  local source="$1" target="$2"
+  if [[ -L "$target" && "$(readlink -f "$target")" == "$(readlink -f "$source")" ]]; then return; fi
+  if [[ -e "$target" || -L "$target" ]]; then
+    echo "conflict: existing path will not be replaced: $target" >&2
+    exit 1
+  fi
+}
+check_path "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
+check_path "$HELPER_SOURCE" "$HELPER_TARGET"
+while IFS= read -r -d '' source; do
+  target="$WALLPAPER_TARGET/${source##*/}"
+  legacy_target="$LEGACY_THEME_TARGET/backgrounds/${source##*/}"
+  if [[ -L "$target" && "$(readlink "$target")" == "$legacy_target" ]]; then continue; fi
+  check_path "$source" "$target"
+done < <(find "$WALLPAPER_SOURCE" -maxdepth 1 -type f \
+  \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.gif' -o -iname '*.bmp' -o -iname '*.webp' \) -print0)
+
 repair_active_theme=false
 if [[ -r "${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme.name" ]] &&
    [[ "$(<"${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/current/theme.name")" == "tokyo-night-wallpapers" ]]; then
@@ -119,6 +190,7 @@ link_wallpapers
 
 link_path "$PLUGIN_SOURCE" "$PLUGIN_TARGET" "monitor background plugin"
 link_path "$HELPER_SOURCE" "$HELPER_TARGET" "wallpaper-monitor command"
+seed_assignments
 
 if $DRY_RUN; then
   echo "Wallpaper dry run complete; no files changed."
@@ -141,7 +213,8 @@ else
     done
     if $discovered; then
       omarchy plugin enable daniel.background >/dev/null
-      echo "Wallpaper package installed and daniel.background enabled; no wallpaper was selected."
+      omarchy-shell background reloadMonitors >/dev/null
+      echo "Wallpaper package installed and daniel.background enabled; saved/default assignments applied."
     else
       echo "Wallpaper package installed, but Omarchy Shell did not discover daniel.background." >&2
       echo "Run: omarchy-shell shell rescanPlugins && omarchy plugin enable daniel.background" >&2

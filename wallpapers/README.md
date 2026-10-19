@@ -29,7 +29,9 @@ This links them into Tokyo Night's user-background directory at
 `~/.config/omarchy/backgrounds/tokyo-night/`, installs the `daniel.background`
 monitor-aware background plugin, and links the `wallpaper-monitor` helper into
 `~/.local/bin`. The wallpapers do not appear as a separate, incomplete Omarchy
-theme, and the installer does not select a wallpaper.
+theme, and installation seeds missing monitor assignments from the portable defaults
+(DP-1: sailboat beach; DP-2: street shop atmosphere). Existing selections are
+preserved; changed existing state is backed up.
 
 Choose wallpapers per connected monitor with:
 
@@ -43,7 +45,9 @@ wallpaper-monitor apply
 The graphical picker combines the current theme's backgrounds, its user
 background directory, and this repository's curated collection. Selections
 persist in `~/.local/state/omarchy/monitor-backgrounds.json` and survive theme
-changes without modifying the repository.
+changes without modifying the repository. The tracked defaults manifest uses
+filenames resolved through the installed background directory, so fresh clones
+do not depend on the original checkout path.
 
 For manual setup without the installer, create the current theme's
 user-background directory and place or link images there:
