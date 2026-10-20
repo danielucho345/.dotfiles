@@ -121,7 +121,9 @@ fi
 
 link_file "$HELPER_SOURCE" "$HELPER_TARGET"
 link_file "$PLUGIN_SOURCE" "$PLUGIN_TARGET"
-if $DRY_RUN; then
+if [[ "${DOTFILES_DEFER_PLUGIN_ACTIVATION:-false}" == true ]]; then
+  echo "Window-switcher plugin activation deferred to the plugins operation."
+elif $DRY_RUN; then
   echo "Would rescan Omarchy plugins and enable $PLUGIN_ID"
 else
   if omarchy-shell shell ping >/dev/null 2>&1; then

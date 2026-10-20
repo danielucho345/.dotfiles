@@ -200,7 +200,9 @@ else
     omarchy theme set tokyo-night
   fi
 
-  if omarchy-shell shell ping >/dev/null 2>&1; then
+  if [[ "${DOTFILES_DEFER_PLUGIN_ACTIVATION:-false}" == true ]]; then
+    echo "Wallpaper files installed; background plugin activation deferred to the plugins operation."
+  elif omarchy-shell shell ping >/dev/null 2>&1; then
     omarchy-shell shell rescanPlugins >/dev/null
     discovered=false
     for _ in {1..40}; do

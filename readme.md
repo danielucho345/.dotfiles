@@ -23,10 +23,12 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ./install-all.sh wallpapers           # install monitor-aware Omarchy wallpapers
 ./install-all.sh hyprland             # opt-in; installs version-aware overrides
 ./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
+./install-all.sh plugins              # restore the declared plugin files and enabled states
 ./install-all.sh desktop-launchers    # backs up existing launchers
 ./install-all.sh whatsapp             # isolated WhatsApp Web without GPU acceleration
 ./install-all.sh postgresql           # separate stateful setup
 ./install-all.sh all                  # packages, dotfiles, shell, desktop launchers only
+./install-all.sh --complete-config all # also restore desktop, tracking, and plugins
 ```
 
 Every operation can be previewed with `--dry-run`. Scripts resolve paths from their own location, so they can be run from another directory.
@@ -53,6 +55,96 @@ than one package should be omitted:
 
 The skipped package remains in the manifest and can be installed later with
 `./install-all.sh packages` after the package issue is resolved.
+
+## Complete configuration
+
+To restore the maintained desktop setup in one invocation:
+
+```bash
+git submodule update --init --recursive
+./install-all.sh --dry-run --complete-config all
+./install-all.sh --complete-config all
+
+# If the preview reports managed configuration conflicts:
+./install-all.sh --dry-run --complete-config --force all
+./install-all.sh --complete-config --force all
+```
+
+`--complete-config` is accepted only with `all`. It runs packages, dotfiles,
+shell setup, desktop settings, wallpapers, Hyprland overrides, ActivityWatch,
+plugins, and desktop launchers, in that order. Plain `all` keeps the shorter
+sequence. PostgreSQL and the older standalone installers remain separate;
+untracked application data and account sessions are not restored.
+Complete setup defers background/window-switcher activation to the plugin
+step, so their state changes share its shell configuration backup. Their
+standalone installers continue to activate them immediately.
+
+Complete setup assumes an existing Omarchy desktop with a Hyprland base
+configuration under `~/.config/hypr`. It checks required sources and initialized
+submodules before installing packages or changing configuration. Git, jq,
+Omarchy Shell, pacman/yay, sudo, ripgrep, and Perl must already be available.
+ActivityWatch also needs a working Rust toolchain, C build tools, pkg-config,
+and user systemd. Install missing build prerequisites with
+`sudo pacman -S --needed rust base-devel`; existing Rust installations can be
+used. Submodules may require access to the private repositories declared in
+`.gitmodules`. Complete setup currently requires `XDG_CONFIG_HOME` to be unset
+or equal to `$HOME/.config`, matching the Hyprland installer.
+
+`--force` remains a separate choice. It permits the backed-up replacements
+supported by dotfiles, desktop settings, and plugins; wallpaper and Hyprland
+link conflicts still stop installation. Each failure names its operation;
+fix that issue and repeat the command. With
+`--skip activitywatch-bin`, both its package installation and its tracking
+setup are omitted. Dry runs show operations and plugin revisions without
+downloads, package installation, or configuration changes.
+
+### Declared Omarchy plugins
+
+`install/plugins.json` is the source of truth for these five plugin states:
+
+| Plugin | Desired state | Source |
+| --- | --- | --- |
+| `daniel.background` | Enabled | Tracked wallpaper plugin |
+| `daniel.window-switcher` | Enabled | Tracked window-switcher plugin |
+| `custom.media` | Disabled | Pinned Music Flow Git revision |
+| `crmne.hyprmoncfg` | Disabled | Pinned hyprmoncfg Git revision |
+| `jankeesvw.notification-center` | Disabled | Pinned Notification Center Git revision |
+
+The standalone `./install-all.sh plugins` operation restores these files and
+states too. It does not install the wallpaper assets, Hyprland bindings, or
+their helper commands; complete setup includes those separate operations.
+Third-party sources are fetched at exact commits into
+`${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/omarchy-plugins/<id>/<revision>`
+and linked into `~/.config/omarchy/plugins/`. Upstream installation scripts
+are never executed. Disabled plugins are installed but their optional runtime
+dependencies are not installed by this operation. Change the manifest's pin
+deliberately when updating a plugin.
+
+An existing clean Git checkout with the same origin and revision is reused.
+Other existing plugin paths cause a conflict; `--force` moves them into a
+unique `~/.local/state/dotfiles-backups/plugins.*` directory before replacement.
+A modified managed cache is refused even with `--force`; move it aside before
+retrying. Shared configuration/plugin directories must be real directories,
+so adding a plugin cannot write through a directory symlink into the checkout.
+
+The plugin operation rescans the running shell, waits for discovery, and
+enforces the declared states using Omarchy commands while preserving unrelated
+plugins. Before state changes, an existing shell configuration is backed up
+under `shell.json.bak.*`. Repeating an already matching installation does not
+change plugin states or create another backup. Keep the checkout and managed
+plugin sources at their installed paths so their symlinks remain valid.
+
+Without a running Omarchy Shell, files are installed and activation is reported
+as **pending**. Finish after login with:
+
+```bash
+./install-all.sh plugins
+```
+
+To roll back a replaced plugin, move its new link aside and restore the
+original from the printed backup path. Restore shell configuration from its
+printed backup when reverting state changes, then rescan with
+`omarchy-shell shell rescanPlugins`.
 
 ## Replacing existing dotfiles
 
@@ -244,6 +336,7 @@ Run the disposable-home installer regression tests:
 
 ```bash
 python3 tests/desktop-installers.py
+python3 tests/complete-config.py
 bash tests/hypr-window-switcher.sh
 ```
 
