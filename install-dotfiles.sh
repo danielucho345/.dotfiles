@@ -128,7 +128,7 @@ for package_path in "$CONFIG_DIR"/*; do
     done
     $selected || continue
   fi
-  target="$HOME/.config/$package"
+  target="${XDG_CONFIG_HOME:-$HOME/.config}/$package"
   echo "==> Checking $package -> $target"
   if [[ -L "$target" && "$(readlink -f "$target")" == "$package_path" ]]; then
     echo "    already linked"
@@ -140,6 +140,9 @@ for package_path in "$CONFIG_DIR"/*; do
       echo "    would create target and stow $package"
     else
       mkdir -p "$target"
+      # Keep the shared plugin directory real: other installers add plugins
+      # here and must never follow a folded Stow link into this repository.
+      [[ "$package" != omarchy ]] || mkdir -p "$target/plugins"
       if ! stow --verbose --dir="$CONFIG_DIR" --target="$target" "$package"; then
         echo "    stow failed for $package" >&2
         conflicts=$((conflicts + 1))
@@ -163,6 +166,7 @@ for package_path in "$CONFIG_DIR"/*; do
     echo "    would create target and stow $package"
   else
     mkdir -p "$target"
+    [[ "$package" != omarchy ]] || mkdir -p "$target/plugins"
     if ! stow --verbose --dir="$CONFIG_DIR" --target="$target" "$package"; then
       echo "    stow failed for $package" >&2
       conflicts=$((conflicts + 1))
