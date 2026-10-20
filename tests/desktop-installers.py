@@ -46,6 +46,7 @@ esac
             path.chmod(0o755)
         self.env = dict(os.environ, HOME=str(self.home),
                         XDG_CONFIG_HOME=str(self.home / '.config'),
+                        XDG_DATA_HOME=str(self.home / '.local/share'),
                         XDG_STATE_HOME=str(self.home / '.local/state'),
                         PATH=f'{self.mock}:{os.environ["PATH"]}')
         self.env.pop('HYPRLAND_INSTANCE_SIGNATURE', None)
@@ -66,6 +67,55 @@ esac
     def write_json(self, path, data):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data))
+
+    def mock_chromium(self):
+        command = self.mock / 'chromium'
+        command.write_text('#!/bin/sh\nprintf "%s\\0" "$@" > "$TEST_CHROMIUM_ARGS"\n')
+        command.chmod(0o755)
+
+    def test_whatsapp_install_backup_repeat_and_dry_run(self):
+        self.mock_chromium()
+        launcher = self.home / '.local/share/applications/WhatsApp.desktop'
+        launcher.parent.mkdir(parents=True)
+        original = 'original WhatsApp launcher\n'
+        launcher.write_text(original)
+        flags = self.config / 'chromium-flags.conf'
+        flags.parent.mkdir(parents=True)
+        flags.write_text('--ozone-platform=wayland\n')
+        before = self.snapshot()
+        self.run_script('install-all.sh', '--dry-run', 'whatsapp')
+        self.assertEqual(before, self.snapshot())
+        self.run_script('install-all.sh', 'whatsapp')
+        self.assertEqual(launcher.read_bytes(), (ROOT / 'desktop-apps/WhatsApp.desktop').read_bytes())
+        backup = next(launcher.parent.glob('WhatsApp.desktop.bak.*/WhatsApp.desktop'))
+        self.assertEqual(backup.read_text(), original)
+        self.assertEqual(flags.read_text(), '--ozone-platform=wayland\n')
+        self.assertFalse((self.config / 'chromium-whatsapp').exists())
+        before = self.snapshot()
+        self.run_script('install/install-whatsapp.sh')
+        self.assertEqual(before, self.snapshot())
+
+    def test_whatsapp_desktop_launch_uses_isolated_profile(self):
+        try:
+            from gi.repository import GLib
+        except ImportError:
+            self.skipTest('PyGObject is required to parse desktop Exec values')
+        self.mock_chromium()
+        desktop = GLib.KeyFile()
+        desktop.load_from_file(str(ROOT / 'desktop-apps/WhatsApp.desktop'), GLib.KeyFileFlags.NONE)
+        _, argv = GLib.shell_parse_argv(desktop.get_string('Desktop Entry', 'Exec'))
+        capture = self.base / 'chromium-args'
+        for custom_config in (None, self.home / 'config with spaces $literal `text`'):
+            with self.subTest(custom_config=custom_config):
+                env = dict(self.env, TEST_CHROMIUM_ARGS=str(capture))
+                env.pop('XDG_CONFIG_HOME', None)
+                if custom_config is not None:
+                    env['XDG_CONFIG_HOME'] = str(custom_config)
+                subprocess.run(argv, env=env, check=True)
+                args = capture.read_bytes().decode().rstrip('\0').split('\0')
+                config = custom_config if custom_config is not None else self.config
+                self.assertEqual(args, [f'--user-data-dir={config}/chromium-whatsapp',
+                                        '--disable-gpu', '--app=https://web.whatsapp.com/'])
 
     def snapshot(self):
         return [(str(p.relative_to(self.home)),
@@ -268,6 +318,39 @@ require("hypr.input")
         self.assertEqual(backup.read_text(), 'old settings')
         before = self.snapshot()
         self.run_script('install-dotfiles.sh', '--only', 'alacritty', '--only', 'tmux')
+        self.assertEqual(before, self.snapshot())
+
+    def test_dotfiles_force_accepts_absolute_links_without_moving_sources(self):
+        relocated = self.base / 'checkout'
+        shutil.copytree(ROOT, relocated, ignore=shutil.ignore_patterns('.git', '.agents', '.aws', '.codex', '__pycache__'))
+        plugins = self.config / 'omarchy/plugins'
+        plugins.mkdir(parents=True)
+        source_plugin = relocated / 'config/omarchy/plugins/daniel.window-switcher'
+        (plugins / source_plugin.name).symlink_to(source_plugin)
+        units = self.config / 'systemd/user'
+        units.mkdir(parents=True)
+        for name in ('aw-awatcher.service', 'aw-server-rust.service'):
+            (units / name).symlink_to(relocated / 'config/systemd/user' / name)
+        (units / 'unrelated.service').write_text('keep')
+        sources = {p: p.read_bytes() for p in (relocated / 'config').rglob('*') if p.is_file()}
+        before = self.snapshot()
+        args = ('--force', '--only', 'omarchy', '--only', 'systemd')
+        self.run_script('install-dotfiles.sh', '--dry-run', *args, root=relocated)
+        self.assertEqual(before, self.snapshot())
+        self.run_script('install-dotfiles.sh', *args, root=relocated)
+        self.assertEqual(sources, {p: p.read_bytes() for p in sources})
+        self.assertEqual((units / 'unrelated.service').read_text(), 'keep')
+        self.assertEqual((plugins / source_plugin.name).resolve(), source_plugin)
+        self.assertFalse((self.home / '.local/state/dotfiles-backups').exists())
+        before = self.snapshot()
+        self.run_script('install-dotfiles.sh', *args, root=relocated)
+        self.assertEqual(before, self.snapshot())
+
+    def test_dotfiles_force_keeps_linked_package_root(self):
+        self.config.mkdir()
+        (self.config / 'tmux').symlink_to(ROOT / 'config/tmux')
+        before = self.snapshot()
+        self.run_script('install-dotfiles.sh', '--force', '--only', 'tmux')
         self.assertEqual(before, self.snapshot())
 
 

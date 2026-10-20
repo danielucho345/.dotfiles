@@ -42,6 +42,28 @@ backup_conflict() {
   fi
 }
 
+has_linked_parent() {
+  local target="$1" parent
+  parent="$(dirname "$2")"
+  while [[ "$parent" != . ]]; do
+    [[ -L "$target/$parent" ]] && return 0
+    parent="$(dirname "$parent")"
+  done
+  return 1
+}
+
+normalize_link() {
+  local source_entry="$1" target_entry="$2" relative_source
+  relative_source="$(realpath --no-symlinks --relative-to="$(dirname "$target_entry")" "$source_entry")"
+  [[ "$(readlink "$target_entry")" == "$relative_source" ]] && return 0
+  if $DRY_RUN; then
+    echo "    would normalize link $target_entry -> $relative_source"
+  else
+    ln -sfn -- "$relative_source" "$target_entry"
+    echo "    normalized link $target_entry -> $relative_source"
+  fi
+}
+
 prepare_force() {
   local package="$1"
   local package_path="$2"
@@ -58,9 +80,15 @@ prepare_force() {
 
   while IFS= read -r -d '' source_entry; do
     relative="${source_entry#"$package_path"/}"
+    # Never inspect or move files through a linked directory: those files
+    # may be the repository sources themselves. The parent link is handled first.
+    has_linked_parent "$target" "$relative" && continue
     target_entry="$target/$relative"
     if [[ -L "$target_entry" ]]; then
-      [[ "$(readlink -f "$target_entry")" == "$source_entry" ]] && continue
+      if [[ "$(readlink -f "$target_entry")" == "$(readlink -f "$source_entry")" ]]; then
+        normalize_link "$source_entry" "$target_entry"
+        continue
+      fi
       backup_conflict "$package" "$relative" "$target_entry"
     elif [[ -e "$target_entry" && ! -d "$target_entry" ]]; then
       backup_conflict "$package" "$relative" "$target_entry"
@@ -72,9 +100,13 @@ prepare_force() {
 
   while IFS= read -r -d '' source_entry; do
     relative="${source_entry#"$package_path"/}"
+    has_linked_parent "$target" "$relative" && continue
     target_entry="$target/$relative"
     if [[ -L "$target_entry" ]]; then
-      [[ "$(readlink -f "$target_entry")" == "$source_entry" ]] && continue
+      if [[ "$(readlink -f "$target_entry")" == "$(readlink -f "$source_entry")" ]]; then
+        normalize_link "$source_entry" "$target_entry"
+        continue
+      fi
       backup_conflict "$package" "$relative" "$target_entry"
     elif [[ -e "$target_entry" ]]; then
       backup_conflict "$package" "$relative" "$target_entry"
@@ -98,6 +130,10 @@ for package_path in "$CONFIG_DIR"/*; do
   fi
   target="$HOME/.config/$package"
   echo "==> Checking $package -> $target"
+  if [[ -L "$target" && "$(readlink -f "$target")" == "$package_path" ]]; then
+    echo "    already linked"
+    continue
+  fi
   if $FORCE; then
     prepare_force "$package" "$package_path" "$target"
     if $DRY_RUN; then

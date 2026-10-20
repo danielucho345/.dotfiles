@@ -4,7 +4,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=false
 usage() { cat <<EOF
 Usage: $0 [--dry-run] [--force] [--skip <package>]... [--list] <operation>
-Operations: packages, dotfiles, shell, desktop-settings, wallpapers, hyprland, activitywatch, desktop-launchers, postgresql, all
+Operations: packages, dotfiles, shell, desktop-settings, wallpapers, hyprland, activitywatch, desktop-launchers, whatsapp, postgresql, all
 EOF
 }
 run() { if $DRY_RUN; then echo "+ $*"; else "$@"; fi; }
@@ -92,6 +92,7 @@ case "$op" in
   hyprland) run_script "$ROOT/install-hyprland-overrides.sh";;
   activitywatch) run_script "$ROOT/install/install-activitywatcher.sh";;
   desktop-launchers) run_script_with_skips "$ROOT/desktop-generator.sh";;
+  whatsapp) run_script "$ROOT/install/install-whatsapp.sh";;
   postgresql) run_script "$ROOT/install/install-postgresql.sh";;
   all)
     forwarded=()
