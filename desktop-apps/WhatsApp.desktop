@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Name=WhatsApp
+Comment=WhatsApp Web without GPU acceleration
+TryExec=chromium
+Exec=sh -c "exec chromium --user-data-dir=\\"\\${XDG_CONFIG_HOME:-\\$HOME/.config}/chromium-whatsapp\\" --disable-gpu --app=https://web.whatsapp.com/"
+Terminal=false
+Type=Application
+Icon=whatsapp
+Categories=Network;InstantMessaging;
+StartupNotify=true

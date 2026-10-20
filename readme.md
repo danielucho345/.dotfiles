@@ -24,6 +24,7 @@ The scripts install Arch/AUR packages, optionally link configuration with GNU St
 ./install-all.sh hyprland             # opt-in; installs version-aware overrides
 ./install-all.sh activitywatch        # install and enable local ActivityWatch tracking
 ./install-all.sh desktop-launchers    # backs up existing launchers
+./install-all.sh whatsapp             # isolated WhatsApp Web without GPU acceleration
 ./install-all.sh postgresql           # separate stateful setup
 ./install-all.sh all                  # packages, dotfiles, shell, desktop launchers only
 ```
@@ -67,6 +68,9 @@ repository links, preserves unrelated files, and refuses conflicting files. To r
 conflicting file under
 `~/.local/state/dotfiles-backups/<timestamp>/` and then lets GNU Stow install
 the repository files. Unrelated files and directories are preserved. This is
+also safe for existing directory symlinks: the installer does not move files
+through them, and converts matching absolute links to relative links that Stow
+recognizes. An already linked package root is left alone. This is
 particularly important for `~/.config/systemd`: the repository provides the
 ActivityWatch user units, but existing units such as `voxtype.service` and
 `*.wants` links must remain untouched. Review the backup before removing it.
@@ -194,6 +198,29 @@ To remove this feature, delete the `SUPER + E` binding from the applicable
 override, then reload Hyprland. After confirming
 `~/.local/bin/hypr-window-switcher` still resolves to this repository's
 `bin/hypr-window-switcher`, remove that symlink with `unlink`.
+
+## WhatsApp without GPU acceleration
+
+Install only the WhatsApp launcher, leaving browser settings unchanged:
+
+```bash
+./install-all.sh --dry-run whatsapp
+./install-all.sh whatsapp
+# Or directly: ./install/install-whatsapp.sh
+```
+
+Chromium must already be installed (`sudo pacman -S --needed chromium`).
+The launcher runs WhatsApp Web with `--disable-gpu` in its own data directory,
+`${XDG_CONFIG_HOME:-$HOME/.config}/chromium-whatsapp`, so Google Meet can keep
+using graphics acceleration in the usual browser. Link WhatsApp with the QR
+code on first launch; later launches reuse that session. Close the old WhatsApp
+window and reopen it from the application menu after installing.
+
+The installer backs up an existing `WhatsApp.desktop` before replacing it;
+reinstalling an identical launcher does nothing. `desktop-launchers` (and `all`)
+also includes this launcher. No browser profiles or global GPU flags are changed.
+To undo it, restore the backed-up launcher. The isolated WhatsApp data stays on
+disk so it can be reused.
 
 ## Shell environment and Oh My Posh
 
