@@ -373,8 +373,10 @@ printf '%s\\n' "${TEST_SUBMODULE_STATUS:- 000 config/nvim}"
             self.git(upstream, 'add', '.')
             self.git(upstream, '-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test',
                      'commit', '-qm', plugin_id)
-            self.manifest['plugins'].append({'id': plugin_id, 'enabled': False,
+            self.manifest['plugins'].append({'id': plugin_id, 'enabled': True,
                 'url': str(upstream), 'revision': self.git(upstream, 'rev-parse', 'HEAD')})
+        for plugin in self.manifest['plugins']:
+            plugin['enabled'] = True
         self.save_manifest()
         self.catalog.write_text(json.dumps([{'id': p['id'], 'enabled': not p['enabled']}
                                            for p in self.manifest['plugins']]))
@@ -411,9 +413,9 @@ printf '%s\\n' "${TEST_SUBMODULE_STATUS:- 000 config/nvim}"
         # Complete setup must defer both first-party activations until the
         # plugin step, so its backup precedes every state change.
         self.assertEqual(self.log.read_text().splitlines(), [
-            'plugin disable custom.media', 'plugin disable crmne.hyprmoncfg',
-            'plugin disable jankeesvw.notification-center',
-            'plugin enable daniel.background', 'plugin enable daniel.window-switcher'])
+            'plugin enable daniel.background', 'plugin enable daniel.window-switcher',
+            'plugin enable custom.media', 'plugin enable crmne.hyprmoncfg',
+            'plugin enable jankeesvw.notification-center'])
         backups_before = sorted(self.shell.parent.glob('shell.json.bak.*'))
         self.run_script('--complete-config', '--force', '--skip', 'activitywatch-bin', 'all')
         self.assertEqual(backups_before, sorted(self.shell.parent.glob('shell.json.bak.*')))

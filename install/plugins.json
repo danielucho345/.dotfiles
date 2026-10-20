@@ -13,19 +13,19 @@
     },
     {
       "id": "custom.media",
-      "enabled": false,
+      "enabled": true,
       "url": "https://github.com/Clifford-Baidoo/Omarchy-music-flow.git",
       "revision": "42c312d8ceb6ad9893b28c62c3cf9b5513f60d24"
     },
     {
       "id": "crmne.hyprmoncfg",
-      "enabled": false,
+      "enabled": true,
       "url": "https://github.com/crmne/omarchy-hyprmoncfg.git",
       "revision": "1ffd38bdbdb37363aabe063a277436da9edf12e6"
     },
     {
       "id": "jankeesvw.notification-center",
-      "enabled": false,
+      "enabled": true,
       "url": "https://github.com/jankeesvw/omarchy-notification-center.git",
       "revision": "1784e198596c2c5933dd99836321db5e2eafd117"
     }

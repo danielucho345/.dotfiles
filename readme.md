@@ -106,9 +106,9 @@ downloads, package installation, or configuration changes.
 | --- | --- | --- |
 | `daniel.background` | Enabled | Tracked wallpaper plugin |
 | `daniel.window-switcher` | Enabled | Tracked window-switcher plugin |
-| `custom.media` | Disabled | Pinned Music Flow Git revision |
-| `crmne.hyprmoncfg` | Disabled | Pinned hyprmoncfg Git revision |
-| `jankeesvw.notification-center` | Disabled | Pinned Notification Center Git revision |
+| `custom.media` | Enabled | Pinned Music Flow Git revision |
+| `crmne.hyprmoncfg` | Enabled | Pinned hyprmoncfg Git revision |
+| `jankeesvw.notification-center` | Enabled | Pinned Notification Center Git revision |
 
 The standalone `./install-all.sh plugins` operation restores these files and
 states too. It does not install the wallpaper assets, Hyprland bindings, or
@@ -116,8 +116,8 @@ their helper commands; complete setup includes those separate operations.
 Third-party sources are fetched at exact commits into
 `${XDG_DATA_HOME:-$HOME/.local/share}/dotfiles/omarchy-plugins/<id>/<revision>`
 and linked into `~/.config/omarchy/plugins/`. Upstream installation scripts
-are never executed. Disabled plugins are installed but their optional runtime
-dependencies are not installed by this operation. Change the manifest's pin
+are never executed. Optional plugin runtime dependencies are not installed
+by this operation. Change the manifest's pin
 deliberately when updating a plugin.
 
 An existing clean Git checkout with the same origin and revision is reused.
