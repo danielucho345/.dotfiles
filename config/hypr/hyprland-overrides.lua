@@ -1,8 +1,9 @@
 -- Personal Hyprland overrides for current Omarchy releases.
 
 hl.unbind("SUPER + CTRL + SHIFT + code:65")
-o.bind(
-  "SUPER + CTRL + SHIFT + code:65",
+-- Replace Omarchy's Theme menu shortcut with the per-monitor picker.
+o.rebind(
+  "SUPER + SHIFT + CTRL + SPACE",
   "Monitor wallpaper picker",
   "wallpaper-monitor select"
 )
