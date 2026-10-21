@@ -11,6 +11,37 @@ o.rebind(
 hl.unbind("SUPER + E")
 o.bind("SUPER + E", "Find open window", "hypr-window-switcher")
 
+-- Use Omarchy's saved monitor blocks so reconnecting a monitor keeps its key.
+local function focus_registered_monitor(index)
+  local state_home = os.getenv("XDG_STATE_HOME") or (os.getenv("HOME") .. "/.local/state")
+  local file = io.open(state_home .. "/omarchy/monitor-workspaces", "r")
+  if not file then return end
+
+  local output
+  for line in file:lines() do
+    local block, connector = line:match("^(%d+)\t([^\t]*)\t")
+    if tonumber(block) == index - 1 then
+      output = connector
+      break
+    end
+  end
+  file:close()
+
+  if output and output ~= "" and hl.get_monitor(output) then
+    hl.dispatch(hl.dsp.focus({ monitor = output }))
+  end
+end
+
+for index = 1, 10 do
+  -- Omarchy uses keycodes for its group-window shortcuts.
+  hl.unbind("SUPER + ALT + code:" .. tostring(index + 9))
+  o.rebind(
+    "SUPER + ALT + " .. tostring(index % 10),
+    "Focus registered monitor " .. index,
+    function() focus_registered_monitor(index) end
+  )
+end
+
 -- Replace Omarchy's default SUPER + SHIFT + S binding.
 hl.unbind("SUPER + SHIFT + S")
 o.bind(
