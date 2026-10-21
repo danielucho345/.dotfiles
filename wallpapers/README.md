@@ -1,6 +1,8 @@
 # Wallpapers
 
-These wallpapers are stored with descriptive names containing their native
+The image files live in
+[`config/omarchy-wallpapers/themes/tokyo-night-wallpapers/backgrounds`](../config/omarchy-wallpapers/themes/tokyo-night-wallpapers/backgrounds/).
+They are stored with descriptive names containing their native
 dimensions and aspect class. They are landscape images intended for desktop
 monitors.
 
