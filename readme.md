@@ -1,6 +1,11 @@
 # Omarchy dotfiles
 
-Safe, opt-in personal configuration for Omarchy 4.0.4. Existing user configuration is treated as authoritative: the scripts do not edit `/usr/share/omarchy/` and do not delete existing `~/.config` content.
+Personal configuration maintained for [Omarchy 4.5.0-rc1](https://github.com/omacom/omarchy/releases/tag/v4.5.0-rc1).
+This release uses Lua Hyprland configuration and gives each monitor its own
+workspaces. The repository retains a legacy `.conf` fallback for older setups;
+the numbered monitor shortcuts described below are provided by the Lua overrides.
+The scripts preserve unrelated user configuration, do not edit
+`/usr/share/omarchy/`, and back up supported configuration replacements.
 
 ## Before you begin
 
@@ -56,6 +61,12 @@ than one package should be omitted:
 The skipped package remains in the manifest and can be installed later with
 `./install-all.sh packages` after the package issue is resolved.
 
+`install/packages.conf` is the package source of truth. The main installer
+calls `pacman` and `yay` directly; the redundant per-package scripts for
+Oh My Posh, Opera, Pomatez, Solaar, Stow, Tokei, Tree, uv, and Watchexec have
+been removed. The remaining standalone installers provide separate optional
+setup and are not automatically included in `all`.
+
 ## Complete configuration
 
 To restore the maintained desktop setup in one invocation:
@@ -73,7 +84,7 @@ git submodule update --init --recursive
 `--complete-config` is accepted only with `all`. It runs packages, dotfiles,
 shell setup, desktop settings, wallpapers, Hyprland overrides, ActivityWatch,
 plugins, and desktop launchers, in that order. Plain `all` keeps the shorter
-sequence. PostgreSQL and the older standalone installers remain separate;
+sequence. PostgreSQL and the remaining optional standalone installers stay separate;
 untracked application data and account sessions are not restored.
 Complete setup defers background/window-switcher activation to the plugin
 step, so their state changes share its shell configuration backup. Their
@@ -204,8 +215,8 @@ by carriage return. The tmux config tracks the active Omarchy bindings and
 appearance without TPM/session-restoration plugins.
 
 `defaults/omarchy-shell.json` holds the selected bar layout and idle settings
-(150 seconds for the screensaver, 300 seconds for locking). These currently
-match the packaged defaults, but tracking them pins the chosen behavior.
+(150 seconds for the screensaver, 300 seconds for locking). The template pins
+these preferences independently of changes to Omarchy's packaged defaults.
 `desktop-settings` merges only `bar` and `idle` into a normal live
 `~/.config/omarchy/shell.json`; plugin registrations and other fields survive.
 It refuses differing settings or a symlink unless `--force` is supplied, which
@@ -227,7 +238,11 @@ The wallpaper operation installs the curated images, the `daniel.background`
 Omarchy plugin, and the `wallpaper-monitor` command. The plugin is a user-owned
 clone of Omarchy's background service, so Omarchy Shell, theme transitions, the
 global wallpaper picker, and the lock-screen fallback continue to work.
-The curated images are linked into
+The curated image source is
+[`config/omarchy-wallpapers/themes/tokyo-night-wallpapers/backgrounds`](config/omarchy-wallpapers/themes/tokyo-night-wallpapers/backgrounds/).
+The duplicate images formerly stored in the top-level `wallpapers/` directory
+have been removed; [wallpapers/README.md](wallpapers/README.md) remains the
+image catalog. The source images are linked into
 `~/.config/omarchy/backgrounds/tokyo-night/`; they extend the stock Tokyo Night
 theme instead of appearing as a separate wallpaper-only theme.
 
@@ -250,7 +265,8 @@ all saved selections. Modified existing state is backed up and replaced
 atomically; malformed state stops installation before assets are changed.
 Missing images and unknown outputs fall back to Omarchy's current global background. `Super+Ctrl+Space`
 keeps the global picker; after installing the Hyprland overrides,
-`Super+Ctrl+Shift+Space` opens the monitor-aware picker.
+`Super+Ctrl+Shift+Space` opens the monitor-aware picker, replacing Omarchy's
+default Theme menu shortcut.
 
 If installation occurs outside a running desktop session, enable the plugin
 after logging in:
@@ -266,6 +282,11 @@ the dotfiles clone with
 `/usr/share/omarchy/shell/plugins/background/Background.qml` and merge relevant
 upstream fixes before re-enabling it.
 
+The custom renderer handles still images. Omarchy 4.5 adds video wallpapers
+and theme intros to its built-in renderer; those features are not implemented
+by this older custom clone. Disable `daniel.background` to use the built-in
+renderer when those features are needed.
+
 ## Hyprland notes
 
 Hyprland overrides are opt-in. Current Omarchy installations source the Stowed
@@ -279,12 +300,67 @@ loads from the main config and bindings file. It backs up all affected files
 before editing them and validates with `hyprctl reload`
 and `hyprctl configerrors` when a Hyprland session is available.
 
+### Monitors and workspaces on Omarchy 4.5
+
+`Super+1–0` selects workspace 1–10 on the focused monitor. It should keep
+focus on that monitor. Omarchy stores a persistent block of ten internal
+workspace IDs per registered monitor in
+`~/.local/state/omarchy/monitor-workspaces`; each bar displays its own local
+workspace numbers. The current GGF/DP-1 uses IDs 1–10 and LG/DP-2 uses IDs
+11–20. Another machine's registration order may differ.
+
+| Shortcut | Action |
+| --- | --- |
+| `Super+1–0` | Select a workspace on the focused monitor |
+| `Super+Shift+1–0` | Move the active window to that local workspace and follow it |
+| `Super+Shift+Alt+1–0` | Move the active window to that local workspace without following |
+| `Super+Alt+1–0` | Focus registered monitor 1–10; `0` means monitor 10 |
+| `Ctrl+Alt+Tab` / `Ctrl+Alt+Shift+Tab` | Focus the next / previous monitor |
+| `Super+Ctrl+Shift+Arrow` | Move the active window to the monitor in that direction and follow it |
+| `Super+Shift+Alt+Arrow` | Move the active workspace to the monitor in that direction |
+
+The custom `Super+Alt+1–0` shortcuts use the saved registration blocks rather
+than the current connector order. Here, `1` focuses GGF and `2` focuses LG;
+`3` is ready for a third registered monitor. Unassigned or disconnected slots
+do nothing. These replace Omarchy's `Super+Alt+1–5` group-window shortcuts.
+
+The old fixed DP-1/DP-2 workspace assignments and legacy Spotify workspace
+rule are commented out. Keep them disabled when using per-monitor workspaces.
+An old rule assigning workspace 2–5 to LG conflicts with GGF's new 1–10 block
+and can make workspace selection jump to the other monitor.
+
+If hyprmoncfg is installed, set its Workspaces strategy to **Off** and
+save/apply the profile, while keeping its display layout settings enabled.
+In the saved profile JSON under `~/.config/hyprmoncfg/profiles/`, this is
+`"workspaces": { "enabled": false, ... }`. Applying the profile regenerates
+`~/.config/hypr/hyprmoncfg-monitors.lua` without workspace assignments.
+Editing only that generated Lua file is temporary: applying an old profile
+can bring the rules back. The full dotfiles installer enables hyprmoncfg but
+does not migrate or disable workspace management in existing local profiles.
+
+After changing configuration, reload and inspect the active rules:
+
+```bash
+hyprctl reload
+hyprctl configerrors
+hyprctl workspacerules -j
+```
+
+### Window switcher
+
 `./install-all.sh hyprland` also links `hypr-window-switcher` into
 `~/.local/bin/`. `Super+E` opens a searchable list of windows on regular
 workspaces. Each result includes its application/title, workspace, and monitor;
 choosing it focuses that exact window, including when it is on another monitor.
 Scratchpad windows are intentionally not listed because they do not have a
 persistent monitor location.
+
+The `daniel.window-switcher` plugin offers **Compact** and **Monitors** views.
+Use the buttons or `Alt+Tab` inside the picker to switch views; the preference
+is saved. Type to filter, use Up/Down to select, and press Enter to focus the
+selected window. In Monitors view, Left/Right changes the selected monitor
+when the search field is empty or unfocused. Escape or `Super+E` closes the
+picker. If the plugin is unavailable, the helper uses the legacy menu picker.
 
 To remove this feature, delete the `SUPER + E` binding from the applicable
 override, then reload Hyprland. After confirming
@@ -340,6 +416,12 @@ python3 tests/complete-config.py
 bash tests/hypr-window-switcher.sh
 ```
 
+Known test limitation: `test_lua_reload_has_one_wallpaper_binding` in
+`tests/desktop-installers.py` still mocks only `o.bind` and expects the old
+keycode binding. It currently fails on `o.rebind`; the mock and assertions
+need updating for the current overrides. This failure predates the cleanup
+and is separate from live Hyprland configuration validation.
+
 Use ShellCheck when available. Test installation behavior with dry runs and a disposable home/config directory before applying changes to a live Omarchy session.
 
 ## ActivityWatch on Hyprland
@@ -350,4 +432,30 @@ ActivityWatch is an explicit opt-in operation. The integration installs the `act
 
 Preview the operation with `./install-all.sh --dry-run activitywatch`. Check it with `systemctl --user status aw-server-rust aw-awatcher` and `journalctl --user -u aw-awatcher`. The local ActivityWatch API is available at `http://127.0.0.1:5600`.
 
-To stop collection, run `systemctl --user disable --now aw-server-rust aw-awatcher`. To uninstall the managed watcher, also run `systemctl --user unlink aw-awatcher.service`, remove `~/.local/bin/awatcher`, and optionally unmask `app-aw\x2dqt@autostart.service` if the packaged ActivityWatch desktop launcher should manage startup again. Existing ActivityWatch data is not removed. No browser watcher or remote synchronization is configured.
+The installed watcher is `~/.local/bin/awatcher`; the server executable is
+`/opt/activitywatch/aw-server-rust/aw-server-rust`. The submodule's
+`awatcher/target/` directory contains regenerable Rust build output, not
+ActivityWatch history. It can be cleaned without stopping the installed
+services:
+
+```bash
+cargo clean --manifest-path awatcher/Cargo.toml
+```
+
+The next watcher installation will rebuild the required output.
+
+To stop collection:
+
+```bash
+systemctl --user disable --now aw-awatcher.service aw-server-rust.service
+```
+
+To uninstall the managed watcher, remove `~/.local/bin/awatcher`. If unit
+symlinks remain under `~/.config/systemd/user/`, first confirm that they point
+to this repository's `config/systemd/user/aw-awatcher.service` and
+`aw-server-rust.service`, then remove only those links and run
+`systemctl --user daemon-reload`. There is no `systemctl unlink` command.
+The dotfiles installer will restore the tracked units if run again.
+Optionally unmask `app-aw\x2dqt@autostart.service` if the packaged ActivityWatch
+desktop launcher should manage startup again. Existing ActivityWatch data is
+not removed. No browser watcher or remote synchronization is configured.
